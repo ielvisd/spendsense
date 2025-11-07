@@ -1,15 +1,17 @@
 <template>
-  <UCard>
+  <UCard class="!bg-white shadow-md">
     <template #header>
-      <h3 class="text-lg font-semibold">Savings Goal Calculator</h3>
+      <div class="border-b border-[#A8DADC] pb-2">
+        <h3 class="text-lg font-bold text-[#1D3557]">Savings Goal Calculator</h3>
+      </div>
     </template>
     
     <div class="space-y-4">
-      <p class="text-sm text-[#457B9D]">
+      <p class="text-sm text-[#1D3557] font-medium">
         Calculate how much you need to save monthly to reach your savings goal.
       </p>
       
-      <UFormField label="Goal Amount ($)" name="goalAmount">
+      <UFormField label="Goal Amount ($)" name="goalAmount" class="[&_label]:text-[#1D3557]">
         <UInput
           v-model.number="goalAmount"
           type="number"
@@ -22,7 +24,7 @@
         />
       </UFormField>
       
-      <UFormField label="Current Savings ($)" name="currentSavings">
+      <UFormField label="Current Savings ($)" name="currentSavings" class="[&_label]:text-[#1D3557]">
         <UInput
           v-model.number="currentSavings"
           type="number"
@@ -34,7 +36,7 @@
         />
       </UFormField>
       
-      <UFormField label="Annual Interest Rate (%)" name="interestRate">
+      <UFormField label="Annual Interest Rate (%)" name="interestRate" class="[&_label]:text-[#1D3557]">
         <UInput
           v-model.number="interestRate"
           type="number"
@@ -47,7 +49,7 @@
         />
       </UFormField>
       
-      <UFormField label="Target Date (months from now)" name="months">
+      <UFormField label="Target Date (months from now)" name="months" class="[&_label]:text-[#1D3557]">
         <UInput
           v-model.number="months"
           type="number"

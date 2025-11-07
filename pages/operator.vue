@@ -258,6 +258,120 @@
             </div>
           </UCard>
         </template>
+        
+        <template #fairness>
+          <!-- Fairness Analysis -->
+          <UCard>
+            <div class="mb-4 flex justify-between items-center">
+              <h2 class="text-xl font-semibold text-[#1D3557]">Fairness & Demographic Parity</h2>
+              <UButton 
+                @click="loadFairnessMetrics" 
+                :loading="loadingFairness" 
+                :aria-busy="loadingFairness"
+                color="primary" 
+                size="sm"
+                aria-label="Refresh fairness metrics"
+              >
+                Refresh
+              </UButton>
+            </div>
+            
+            <div v-if="loadingFairness" class="text-center py-8 text-[#457B9D]">
+              Loading fairness metrics...
+            </div>
+            
+            <div v-else-if="fairnessMetrics" class="space-y-6">
+              <!-- Fairness Score -->
+              <UCard class="!bg-white">
+                <div class="text-center">
+                  <h3 class="text-lg font-semibold text-[#1D3557] mb-2">Overall Fairness Score</h3>
+                  <div class="text-4xl font-bold" :class="getScoreColor(fairnessMetrics.fairness_score)">
+                    {{ fairnessMetrics.fairness_score.toFixed(1) }}/100
+                  </div>
+                  <p class="text-sm text-[#457B9D] mt-2">
+                    {{ fairnessMetrics.bias_flags?.length || 0 }} potential bias flag(s) detected
+                  </p>
+                </div>
+              </UCard>
+              
+              <!-- Bias Flags -->
+              <div v-if="fairnessMetrics.bias_flags && fairnessMetrics.bias_flags.length > 0">
+                <h3 class="text-lg font-semibold text-[#1D3557] mb-3">Potential Bias Flags</h3>
+                <div class="space-y-2">
+                  <UAlert
+                    v-for="(flag, idx) in fairnessMetrics.bias_flags"
+                    :key="idx"
+                    color="warning"
+                    variant="soft"
+                  >
+                    <template #title>
+                      {{ flag.persona_type }} - {{ flag.demographic_dimension }} ({{ flag.demographic_value }})
+                    </template>
+                    <template #description>
+                      {{ flag.percentage.toFixed(1) }}% (expected {{ flag.expected_percentage.toFixed(1) }}%, 
+                      difference: {{ flag.difference.toFixed(1) }}%)
+                    </template>
+                  </UAlert>
+                </div>
+              </div>
+              
+              <!-- Demographic Breakdown Tables -->
+              <div class="space-y-6">
+                <!-- By Age -->
+                <div>
+                  <h3 class="text-lg font-semibold text-[#1D3557] mb-3">By Age</h3>
+                  <div class="overflow-x-auto">
+                    <UTable
+                      :rows="formatDemographicTable(fairnessMetrics.demographic_breakdown?.by_age)"
+                      :columns="demographicColumns"
+                      class="w-full"
+                    />
+                  </div>
+                </div>
+                
+                <!-- By Gender -->
+                <div>
+                  <h3 class="text-lg font-semibold text-[#1D3557] mb-3">By Gender</h3>
+                  <div class="overflow-x-auto">
+                    <UTable
+                      :rows="formatDemographicTable(fairnessMetrics.demographic_breakdown?.by_gender)"
+                      :columns="demographicColumns"
+                      class="w-full"
+                    />
+                  </div>
+                </div>
+                
+                <!-- By Income -->
+                <div>
+                  <h3 class="text-lg font-semibold text-[#1D3557] mb-3">By Income</h3>
+                  <div class="overflow-x-auto">
+                    <UTable
+                      :rows="formatDemographicTable(fairnessMetrics.demographic_breakdown?.by_income)"
+                      :columns="demographicColumns"
+                      class="w-full"
+                    />
+                  </div>
+                </div>
+                
+                <!-- By Ethnicity -->
+                <div>
+                  <h3 class="text-lg font-semibold text-[#1D3557] mb-3">By Ethnicity</h3>
+                  <div class="overflow-x-auto">
+                    <UTable
+                      :rows="formatDemographicTable(fairnessMetrics.demographic_breakdown?.by_ethnicity)"
+                      :columns="demographicColumns"
+                      class="w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div v-else class="text-center py-8 text-[#457B9D]">
+              No fairness metrics available. Run evaluation to generate metrics.
+            </div>
+          </UCard>
+        </template>
       </UTabs>
     </div>
   </div>
@@ -276,17 +390,27 @@ const toast = useToast()
 
 const loading = ref(false)
 const loadingFlagQueue = ref(false)
+const loadingFairness = ref(false)
 const users = ref<any[]>([])
 const expandedRows = ref(new Set<string>())
 const selectedRecommendations = ref(new Set<string>())
 const bulkProcessing = ref(false)
 const activeTab = ref(0)
 const flaggedRecommendations = ref<any[]>([])
+const fairnessMetrics = ref<any>(null)
 const currentOperatorId = ref<string | null>(null)
+
+const demographicColumns = [
+  { key: 'demographic', label: 'Demographic' },
+  { key: 'persona', label: 'Persona' },
+  { key: 'count', label: 'Count' },
+  { key: 'percentage', label: 'Percentage' }
+]
 
 const tabs = [
   { label: 'Users', value: 'users' },
-  { label: 'Flag Queue', value: 'flag-queue' }
+  { label: 'Flag Queue', value: 'flag-queue' },
+  { label: 'Fairness Analysis', value: 'fairness' }
 ]
 
 const filters = ref({
@@ -596,6 +720,44 @@ const removeFromFlagQueue = async (recId: string) => {
   })
 }
 
+const loadFairnessMetrics = async () => {
+  loadingFairness.value = true
+  try {
+    const response = await $fetch('/api/operator/fairness')
+    fairnessMetrics.value = response.fairness
+  } catch (error: any) {
+    toast.add({
+      title: 'Error',
+      description: error.message || 'Failed to load fairness metrics',
+      color: 'red'
+    })
+  } finally {
+    loadingFairness.value = false
+  }
+}
+
+const formatDemographicTable = (breakdown: any): any[] => {
+  if (!breakdown) return []
+  const rows: any[] = []
+  for (const [demoValue, personas] of Object.entries(breakdown)) {
+    for (const [personaType, data] of Object.entries(personas as any)) {
+      rows.push({
+        demographic: demoValue,
+        persona: personaType,
+        count: (data as any).count || 0,
+        percentage: `${((data as any).percentage || 0).toFixed(1)}%`
+      })
+    }
+  }
+  return rows
+}
+
+const getScoreColor = (score: number): string => {
+  if (score >= 80) return 'text-green-600'
+  if (score >= 60) return 'text-yellow-600'
+  return 'text-red-600'
+}
+
 // Set up Supabase Realtime for live updates
 const setupRealtime = () => {
   // Subscribe to recommendations changes
@@ -692,6 +854,7 @@ onMounted(async () => {
   
   await loadUsers()
   await loadFlagQueue()
+  await loadFairnessMetrics()
   
   // Set up realtime subscriptions
   const cleanup = setupRealtime()

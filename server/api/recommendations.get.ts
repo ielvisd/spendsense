@@ -16,6 +16,8 @@ import { validateTone } from '~/utils/toneValidation'
  * - Disclaimer enforcement (add to all recommendations)
  */
 export default defineEventHandler(async (event) => {
+  const startTime = Date.now()
+  
   try {
     const query = getQuery(event)
     const userId = query.user_id as string
@@ -102,9 +104,25 @@ export default defineEventHandler(async (event) => {
         })
     }
     
+    // Calculate latency
+    const latency = Date.now() - startTime
+    
+    // Log latency for evaluation metrics
+    await supabase
+      .from('logs')
+      .insert({
+        user_id: userId,
+        action_type: 'recommendation_generation',
+        decision_trace: {
+          latency_ms: latency,
+          recommendation_count: filteredRecommendations.length
+        }
+      })
+    
     return {
       education_items: filteredRecommendations.filter(r => r.type === 'education').slice(0, 5),
-      offers: filteredRecommendations.filter(r => r.type === 'offer').slice(0, 3)
+      offers: filteredRecommendations.filter(r => r.type === 'offer').slice(0, 3),
+      latency_ms: latency
     }
   } catch (error: any) {
     throw createError({

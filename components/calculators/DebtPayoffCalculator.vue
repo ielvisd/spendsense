@@ -1,15 +1,17 @@
 <template>
-  <UCard>
+  <UCard class="!bg-white shadow-md">
     <template #header>
-      <h3 class="text-lg font-semibold">Debt Payoff Calculator</h3>
+      <div class="border-b border-[#A8DADC] pb-2">
+        <h3 class="text-lg font-bold text-[#1D3557]">Debt Payoff Calculator</h3>
+      </div>
     </template>
     
     <div class="space-y-4">
-      <p class="text-sm text-[#457B9D]">
+      <p class="text-sm text-[#1D3557] font-medium">
         Calculate how long it will take to pay off your debt and how much interest you'll pay.
       </p>
       
-      <UFormField label="Current Balance ($)" name="balance">
+      <UFormField label="Current Balance ($)" name="balance" class="[&_label]:text-[#1D3557]">
         <UInput
           v-model.number="balance"
           type="number"
@@ -22,7 +24,7 @@
         />
       </UFormField>
       
-      <UFormField label="Annual Interest Rate (%)" name="interestRate">
+      <UFormField label="Annual Interest Rate (%)" name="interestRate" class="[&_label]:text-[#1D3557]">
         <UInput
           v-model.number="interestRate"
           type="number"
@@ -36,7 +38,7 @@
         />
       </UFormField>
       
-      <UFormField label="Monthly Payment ($)" name="monthlyPayment">
+      <UFormField label="Monthly Payment ($)" name="monthlyPayment" class="[&_label]:text-[#1D3557]">
         <UInput
           v-model.number="monthlyPayment"
           type="number"

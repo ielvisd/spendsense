@@ -98,12 +98,16 @@ export function detectSavings(accounts: Account[], transactions: Transaction[]):
 
 /**
  * Credit Detection: utilization tiers, min-payment flag, interest >0, overdue
+ * Aggregates multiple credit accounts into single signals per type
  */
 export function detectCredit(accounts: Account[], liabilities: Liability[]): Signal[] {
   const signals: Signal[] = []
   
-  // Check credit accounts
+  // Check credit accounts - aggregate by signal type
   const creditAccounts = accounts.filter(acc => acc.type === 'credit')
+  
+  const highUtilAccounts: Array<{ account_id: string; utilization: number; current: number; limit: number }> = []
+  const moderateUtilAccounts: Array<{ account_id: string; utilization: number; current: number; limit: number }> = []
   
   for (const account of creditAccounts) {
     const limit = account.balances?.limit || 0
@@ -113,28 +117,56 @@ export function detectCredit(accounts: Account[], liabilities: Liability[]): Sig
       const utilization = (current / limit) * 100
       
       if (utilization >= 50) {
-        signals.push({
-          signal_type: 'credit_high_utilization',
-          signal_data: {
-            account_id: account.account_id,
-            utilization_percentage: utilization,
-            current_balance: current,
-            credit_limit: limit,
-            tier: utilization >= 80 ? 'critical' : utilization >= 50 ? 'high' : 'moderate'
-          }
+        highUtilAccounts.push({
+          account_id: account.account_id,
+          utilization,
+          current,
+          limit
         })
       } else if (utilization >= 30) {
-        signals.push({
-          signal_type: 'credit_moderate_utilization',
-          signal_data: {
-            account_id: account.account_id,
-            utilization_percentage: utilization,
-            current_balance: current,
-            credit_limit: limit
-          }
+        moderateUtilAccounts.push({
+          account_id: account.account_id,
+          utilization,
+          current,
+          limit
         })
       }
     }
+  }
+  
+  // Aggregate high utilization accounts into single signal
+  if (highUtilAccounts.length > 0) {
+    const maxUtil = Math.max(...highUtilAccounts.map(a => a.utilization))
+    const totalBalance = highUtilAccounts.reduce((sum, a) => sum + a.current, 0)
+    const totalLimit = highUtilAccounts.reduce((sum, a) => sum + a.limit, 0)
+    const avgUtilization = totalLimit > 0 ? (totalBalance / totalLimit) * 100 : 0
+    
+    signals.push({
+      signal_type: 'credit_high_utilization',
+      signal_data: {
+        account_count: highUtilAccounts.length,
+        accounts: highUtilAccounts.map(a => a.account_id),
+        max_utilization_percentage: maxUtil,
+        average_utilization_percentage: avgUtilization,
+        total_balance: totalBalance,
+        total_limit: totalLimit,
+        tier: maxUtil >= 80 ? 'critical' : 'high'
+      }
+    })
+  }
+  
+  // Aggregate moderate utilization accounts into single signal
+  if (moderateUtilAccounts.length > 0) {
+    const avgUtilization = moderateUtilAccounts.reduce((sum, a) => sum + a.utilization, 0) / moderateUtilAccounts.length
+    
+    signals.push({
+      signal_type: 'credit_moderate_utilization',
+      signal_data: {
+        account_count: moderateUtilAccounts.length,
+        accounts: moderateUtilAccounts.map(a => a.account_id),
+        average_utilization_percentage: avgUtilization
+      }
+    })
   }
   
   // Check liabilities

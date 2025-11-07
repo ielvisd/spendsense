@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-[#F1FAEE] via-[#E8F5E9] to-[#F1FAEE] py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+  <div class="min-h-screen bg-[#F1FAEE] py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
     <!-- Decorative background elements -->
     <div class="absolute inset-0 overflow-hidden pointer-events-none">
       <div class="absolute -top-40 -right-40 w-80 h-80 bg-[#A8DADC] rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
@@ -8,8 +8,15 @@
     </div>
 
     <div class="max-w-lg mx-auto relative z-10">
-      <!-- Logo/Brand Section -->
-      <div class="text-center mb-8">
+      <!-- Loading State for Onboarding Check -->
+      <div v-if="checkingOnboarding" class="text-center py-12">
+        <p class="text-[#457B9D]">Checking your onboarding status...</p>
+      </div>
+      
+      <!-- Main Content -->
+      <template v-else>
+        <!-- Logo/Brand Section -->
+        <div class="text-center mb-8">
         <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#457B9D] to-[#1D3557] rounded-2xl shadow-lg mb-4 transform hover:scale-105 transition-transform duration-300">
           <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
@@ -21,57 +28,152 @@
         <p class="text-[#457B9D] text-sm font-medium">Take control of your finances</p>
       </div>
 
-      <!-- Registration Form Card -->
-      <div class="max-w-sm mx-auto bg-white/95 backdrop-blur-sm shadow-2xl rounded-2xl p-6 sm:p-8 border border-[#A8DADC]/50 transform transition-all duration-300 hover:shadow-3xl">
-        <UForm v-if="!user" :state="registerForm" @submit="handleRegister" class="space-y-5 w-full" aria-label="Registration form">
-          <UFormField label="Email" name="email" required class="w-full">
-            <UInput 
-              v-model="registerForm.email" 
-              type="email" 
-              placeholder="your@email.com"
-              color="primary"
-              size="lg"
-              icon="i-lucide-mail"
-              aria-label="Email address"
-              aria-required="true"
-              aria-describedby="email-description"
-              class="transition-all duration-200 w-full"
-            />
-          </UFormField>
-          <p id="email-description" class="sr-only">Enter your email address to create an account</p>
-          
-          <UFormField label="Password" name="password" required class="w-full">
-            <UInput 
-              v-model="registerForm.password" 
-              type="password" 
-              placeholder="••••••••"
-              color="primary"
-              size="lg"
-              icon="i-lucide-lock"
-              aria-label="Password"
-              aria-required="true"
-              aria-describedby="password-description"
-              class="transition-all duration-200 w-full"
-            />
-          </UFormField>
-          <p id="password-description" class="sr-only">Enter a secure password for your account</p>
-          
-          <div class="pt-3 w-full">
-            <UButton 
-              type="submit" 
-              :loading="registering" 
-              :aria-busy="registering"
-              block 
-              size="lg"
-              color="primary" 
-              class="bg-gradient-to-r from-[#457B9D] to-[#3d6d8d] hover:from-[#3d6d8d] hover:to-[#345a7a] text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 w-full"
-              aria-label="Create account"
-            >
-              <span v-if="!registering">Create Account</span>
-              <span v-else>Creating...</span>
-            </UButton>
-          </div>
-        </UForm>
+      <!-- Authentication Form Card -->
+      <UCard class="max-w-md mx-auto shadow-xl">
+        <!-- Authentication Forms (Sign Up / Log In) -->
+        <div v-if="!user">
+          <!-- Tabs for Sign Up / Log In -->
+          <UTabs 
+            :items="authTabs" 
+            v-model="activeAuthTab" 
+            default-value="signup"
+            variant="pill"
+            class="mb-6"
+          >
+            <template #signup>
+              <!-- Sign Up Form -->
+              <UForm :state="registerForm" @submit="handleRegister" class="space-y-4 mt-6" aria-label="Registration form">
+                <UFormField label="Email" name="email" required>
+                  <UInput 
+                    v-model="registerForm.email" 
+                    type="email" 
+                    placeholder="your@email.com"
+                    size="lg"
+                    color="primary"
+                    icon="i-lucide-mail"
+                    class="w-full"
+                    aria-label="Email address"
+                    aria-required="true"
+                  />
+                </UFormField>
+                
+                <UFormField label="Password" name="password" required>
+                  <UInput 
+                    v-model="registerForm.password" 
+                    type="password" 
+                    placeholder="Enter your password"
+                    size="lg"
+                    color="primary"
+                    icon="i-lucide-lock"
+                    class="w-full"
+                    aria-label="Password"
+                    aria-required="true"
+                  />
+                </UFormField>
+                
+                <UButton 
+                  type="submit" 
+                  :loading="registering" 
+                  block 
+                  size="lg"
+                  class="mt-6"
+                >
+                  Create Account
+                </UButton>
+              </UForm>
+            </template>
+
+            <template #login>
+              <!-- Log In Form -->
+              <UForm :state="loginForm" @submit="handleLogin" class="space-y-4 mt-6" aria-label="Login form">
+                <UFormField label="Email" name="email" required>
+                  <UInput 
+                    v-model="loginForm.email" 
+                    type="email" 
+                    placeholder="your@email.com"
+                    size="lg"
+                    color="primary"
+                    icon="i-lucide-mail"
+                    class="w-full"
+                    aria-label="Email address"
+                    aria-required="true"
+                  />
+                </UFormField>
+                
+                <UFormField label="Password" name="password" required>
+                  <UInput 
+                    v-model="loginForm.password" 
+                    type="password" 
+                    placeholder="Enter your password"
+                    size="lg"
+                    color="primary"
+                    icon="i-lucide-lock"
+                    class="w-full"
+                    aria-label="Password"
+                    aria-required="true"
+                  />
+                </UFormField>
+                
+                <div class="flex justify-end -mt-2">
+                  <UButton
+                    variant="link"
+                    size="sm"
+                    @click="showPasswordReset = true"
+                    class="text-sm text-[#457B9D] hover:text-[#345a7a]"
+                  >
+                    Forgot Password?
+                  </UButton>
+                </div>
+                
+                <UButton 
+                  type="submit" 
+                  :loading="loggingIn" 
+                  block 
+                  size="lg"
+                  class="mt-6"
+                >
+                  Log In
+                </UButton>
+              </UForm>
+            </template>
+          </UTabs>
+
+          <!-- Password Reset Modal -->
+          <UModal v-model:open="showPasswordReset" title="Reset Password" description="Enter your email address and we'll send you a link to reset your password.">
+            <template #body>
+              <UForm :state="{ email: resetEmail }" @submit.prevent="handlePasswordReset" class="space-y-4">
+                <UFormField label="Email" name="email" required>
+                  <UInput 
+                    v-model="resetEmail" 
+                    type="email" 
+                    placeholder="your@email.com"
+                    size="lg"
+                    color="primary"
+                    icon="i-lucide-mail"
+                    class="w-full"
+                  />
+                </UFormField>
+              </UForm>
+            </template>
+            
+            <template #footer>
+              <div class="flex gap-3 justify-end">
+                <UButton
+                  variant="outline"
+                  @click="showPasswordReset = false"
+                >
+                  Cancel
+                </UButton>
+                <UButton
+                  :loading="resettingPassword"
+                  @click="handlePasswordReset"
+                >
+                  Send Reset Link
+                </UButton>
+              </div>
+            </template>
+          </UModal>
+        </div>
         
         <!-- Data Upload -->
         <div v-else class="space-y-6">
@@ -87,7 +189,7 @@
             </p>
           </div>
           
-          <div class="border-2 border-dashed border-[#A8DADC] rounded-xl p-6 hover:border-[#457B9D] transition-colors duration-200 bg-[#F1FAEE]/30">
+          <div class="border-2 border-dashed border-[#A8DADC] rounded-xl p-6 hover:border-[#457B9D] transition-colors duration-200 bg-white">
             <input
               type="file"
               accept=".json,.csv"
@@ -112,7 +214,7 @@
           
           <!-- Consent Checkbox -->
           <div class="border-t border-[#A8DADC] pt-6 mt-6">
-            <div class="bg-[#F1FAEE]/50 rounded-lg p-4 border border-[#A8DADC]/30">
+            <div class="bg-white rounded-lg p-4 border border-[#A8DADC]">
               <UCheckbox
                 v-model="consentGranted"
                 label="I consent to SpendSense analyzing my financial data to provide personalized recommendations"
@@ -120,7 +222,7 @@
                 aria-describedby="consent-description"
                 class="text-[#1D3557]"
               />
-              <p id="consent-description" class="text-xs text-[#1D3557]/70 mt-2 ml-6">
+              <p id="consent-description" class="text-xs text-[#457B9D] mt-2 ml-6">
                 You can revoke this consent at any time in your settings.
               </p>
             </div>
@@ -135,8 +237,7 @@
               :aria-disabled="!consentGranted || !dataUploaded"
               block
               size="lg"
-              color="primary"
-              class="bg-gradient-to-r from-[#457B9D] to-[#3d6d8d] hover:from-[#3d6d8d] hover:to-[#345a7a] text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              class="font-semibold shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               aria-label="Complete onboarding and grant consent"
             >
               <span v-if="!processing">Complete Onboarding</span>
@@ -144,13 +245,14 @@
             </UButton>
           </div>
         </div>
-      </div>
+      </UCard>
+      </template>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useSupabaseClient } from '#imports'
 import { useRouter } from 'vue-router'
 import { useToast } from '#imports'
@@ -164,13 +266,57 @@ const router = useRouter()
 const toast = useToast()
 
 const user = ref<any>(null)
+const checkingOnboarding = ref(true)
 const registering = ref(false)
+const loggingIn = ref(false)
 const processing = ref(false)
 const dataUploaded = ref(false)
 const consentGranted = ref(false)
 const uploadProgress = ref(0)
+const activeAuthTab = ref('signup') // 'signup' or 'login'
+const showPasswordReset = ref(false)
+const resettingPassword = ref(false)
+const resetEmail = ref('')
+
+const authTabs = [
+  { label: 'Sign Up', value: 'signup', slot: 'signup' },
+  { label: 'Log In', value: 'login', slot: 'login' }
+]
+
+// Check if user has already completed onboarding
+onMounted(async () => {
+  try {
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    if (authUser) {
+      // Check if user has granted consent (completed onboarding)
+      const { data: consentData } = await supabase
+        .from('consent')
+        .select('consent_status')
+        .eq('user_id', authUser.id)
+        .single()
+      
+      // If consent exists and is true, redirect to dashboard
+      if (consentData && consentData.consent_status) {
+        router.push('/')
+        return
+      }
+      
+      // User is logged in but hasn't completed onboarding
+      user.value = authUser
+    }
+  } catch (error) {
+    console.error('Error checking onboarding status:', error)
+  } finally {
+    checkingOnboarding.value = false
+  }
+})
 
 const registerForm = ref({
+  email: '',
+  password: ''
+})
+
+const loginForm = ref({
   email: '',
   password: ''
 })
@@ -226,6 +372,104 @@ const handleRegister = async (event: any) => {
     // Extract error message from various possible locations
     let errorMessage = 'An error occurred during registration. Please try again.'
     
+    // Try to extract message from different error structures
+    if (error.data?.message) {
+      // Nuxt $fetch error structure - data.message
+      errorMessage = error.data.message
+    } else if (error.data?.error?.message) {
+      // Nested error structure
+      errorMessage = error.data.error.message
+    } else if (error.response?._data?.message) {
+      // Standard fetch error structure
+      errorMessage = error.response._data.message
+    } else if (error.response?.data?.message) {
+      // Alternative response structure
+      errorMessage = error.response.data.message
+    } else if (error.message && !error.message.includes('Bad Request')) {
+      // Use error.message if it's not just the HTTP status
+      errorMessage = error.message
+    }
+    
+    // Check if email already exists - suggest switching to login
+    const isAccountExists = errorMessage.toLowerCase().includes('already exists') || 
+                           errorMessage.toLowerCase().includes('already registered') ||
+                           errorMessage.toLowerCase().includes('try logging in')
+    
+    if (isAccountExists) {
+      // Pre-fill login form with email and switch to login mode
+      loginForm.value.email = registerForm.value.email
+      activeAuthTab.value = 'login' // Switch to login tab
+      
+      toast.add({
+        title: 'Account already exists',
+        description: errorMessage.includes('try logging in') 
+          ? errorMessage 
+          : 'This email is already registered. Please log in instead.',
+        color: 'warning',
+        duration: 5000
+      })
+    } else {
+      toast.add({
+        title: 'Registration failed',
+        description: errorMessage,
+        color: 'error',
+        duration: 5000
+      })
+    }
+    
+    console.error('Error details:', {
+      error,
+      data: error.data,
+      response: error.response,
+      message: errorMessage
+    })
+  } finally {
+    registering.value = false
+  }
+}
+
+const handleLogin = async (event: any) => {
+  loggingIn.value = true
+  try {
+    const formData = event.data || loginForm.value
+    
+    // Use server-side endpoint to avoid CORS issues
+    const response = await $fetch<any>('/api/auth/login', {
+      method: 'POST',
+      body: {
+        email: formData.email,
+        password: formData.password
+      }
+    })
+    
+    // Check if the response contains an error
+    if (response.error) {
+      throw new Error(response.message || 'Login failed')
+    }
+    
+    // Set the session in the client
+    if (response.user && response.session) {
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: response.session.access_token,
+        refresh_token: response.session.refresh_token
+      })
+      
+      if (sessionError) throw sessionError
+      
+      user.value = response.user
+      toast.add({
+        title: 'Welcome back!',
+        description: 'Please upload your data to continue.',
+        color: 'success'
+      })
+    } else {
+      throw new Error('Login failed - no session received')
+    }
+  } catch (error: any) {
+    console.error('Login error:', error)
+    // Extract error message from various possible locations
+    let errorMessage = 'An error occurred during login. Please try again.'
+    
     if (error.data) {
       // Nuxt $fetch error structure
       errorMessage = error.data.message || errorMessage
@@ -236,20 +480,86 @@ const handleRegister = async (event: any) => {
       errorMessage = error.message
     }
     
+    // Check if user not found - suggest signing up
+    if (errorMessage.includes('No account found') || errorMessage.includes('User not found')) {
+      // Pre-fill signup form with email and switch to signup mode
+      registerForm.value.email = loginForm.value.email
+      activeAuthTab.value = 'signup' // Switch to signup tab
+      
+      toast.add({
+        title: 'Account not found',
+        description: 'No account exists with this email. Would you like to sign up instead?',
+        color: 'info'
+      })
+    } else {
+      toast.add({
+        title: 'Login failed',
+        description: errorMessage,
+        color: 'error'
+      })
+    }
+    
     console.error('Error details:', {
       error,
       data: error.data,
       response: error.response,
       message: errorMessage
     })
+  } finally {
+    loggingIn.value = false
+  }
+}
+
+const handlePasswordReset = async () => {
+  if (!resetEmail.value) {
+    toast.add({
+      title: 'Email required',
+      description: 'Please enter your email address.',
+      color: 'error'
+    })
+    return
+  }
+  
+  resettingPassword.value = true
+  try {
+    const response = await $fetch<any>('/api/auth/reset-password', {
+      method: 'POST',
+      body: {
+        email: resetEmail.value
+      }
+    })
+    
+    if (response.error) {
+      throw new Error(response.message || 'Password reset failed')
+    }
     
     toast.add({
-      title: 'Registration failed',
+      title: 'Reset link sent!',
+      description: response.message || 'If an account exists with this email, you will receive a password reset link shortly.',
+      color: 'success'
+    })
+    
+    showPasswordReset.value = false
+    resetEmail.value = ''
+  } catch (error: any) {
+    console.error('Password reset error:', error)
+    let errorMessage = 'Failed to send password reset email. Please try again.'
+    
+    if (error.data) {
+      errorMessage = error.data.message || errorMessage
+    } else if (error.response) {
+      errorMessage = error.response._data?.message || error.response.message || errorMessage
+    } else if (error.message) {
+      errorMessage = error.message
+    }
+    
+    toast.add({
+      title: 'Password reset failed',
       description: errorMessage,
       color: 'error'
     })
   } finally {
-    registering.value = false
+    resettingPassword.value = false
   }
 }
 
@@ -306,10 +616,26 @@ const handleFileUpload = async (event: Event) => {
     uploadProgress.value = 30
     
     // Upload to server (will store file automatically)
-    const response = await $fetch('/api/ingest', {
+    // For JSON body requests, we need to append query params to the URL
+    const url = currentUserId 
+      ? `/api/ingest?user_id=${encodeURIComponent(currentUserId)}`
+      : '/api/ingest'
+    
+    const response = await $fetch<{
+      success: boolean
+      message: string
+      results: {
+        users: number
+        accounts: number
+        transactions: number
+        liabilities: number
+        errors: string[]
+      }
+      file_stored?: boolean
+      file_name?: string
+    }>(url, {
       method: 'POST',
-      body: { data },
-      params: currentUserId ? { user_id: currentUserId } : {}
+      body: { data }
     })
     
     uploadProgress.value = 100
@@ -348,8 +674,17 @@ const handleConsent = async () => {
       currentUser.id = authUser.id
     }
     
+    // Get the access token and refresh token from the session
+    const { data: { session } } = await supabase.auth.getSession()
+    const accessToken = session?.access_token
+    const refreshToken = session?.refresh_token
+    
     await $fetch('/api/consent', {
       method: 'POST',
+      headers: accessToken ? {
+        'Authorization': `Bearer ${accessToken}`,
+        'X-Refresh-Token': refreshToken || ''
+      } : {},
       body: {
         user_id: currentUser.id,
         consent_status: true

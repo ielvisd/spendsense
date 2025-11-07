@@ -4,13 +4,15 @@
       <h1 class="text-3xl font-bold text-[#1D3557] mb-8">Settings</h1>
       
       <!-- Consent Management -->
-      <UCard class="mb-6">
+      <UCard class="mb-6 !bg-white shadow-lg">
         <template #header>
-          <h2 class="text-xl font-semibold">Data Consent</h2>
+          <div class="border-b border-[#A8DADC] pb-3">
+            <h2 class="text-xl font-bold text-[#1D3557]">Data Consent</h2>
+          </div>
         </template>
-        <div class="space-y-4">
+        <div class="space-y-4 pt-4">
           <div>
-            <p class="text-[#457B9D] mb-4">
+            <p class="text-[#1D3557] font-medium mb-4">
               You can revoke your consent to data processing at any time. Revoking consent will:
             </p>
             <ul class="list-disc list-inside text-[#1D3557] space-y-2 mb-4">
@@ -49,38 +51,55 @@
       </UCard>
       
       <!-- Account Information -->
-      <UCard>
+      <UCard class="!bg-white shadow-lg">
         <template #header>
-          <h2 class="text-xl font-semibold">Account Information</h2>
+          <div class="border-b border-[#A8DADC] pb-3">
+            <h2 class="text-xl font-bold text-[#1D3557]">Account Information</h2>
+          </div>
         </template>
-        <div class="space-y-4">
+        <div class="space-y-4 pt-4">
           <div>
-            <p class="text-sm text-[#457B9D] mb-1">Email</p>
-            <p class="text-[#1D3557]">{{ userEmail }}</p>
+            <p class="text-sm text-[#1D3557] font-semibold mb-1">Email</p>
+            <p class="text-[#1D3557] font-medium">{{ userEmail }}</p>
           </div>
           <div>
-            <p class="text-sm text-[#457B9D] mb-1">User ID</p>
-            <p class="text-[#1D3557] font-mono text-sm">{{ currentUserId }}</p>
+            <p class="text-sm text-[#1D3557] font-semibold mb-1">User ID</p>
+            <p class="text-[#1D3557] font-mono text-sm font-medium">{{ currentUserId }}</p>
+          </div>
+          <div class="pt-4 border-t border-[#A8DADC]">
+            <UButton
+              color="red"
+              variant="outline"
+              @click="handleLogout"
+              :loading="loggingOut"
+              :aria-busy="loggingOut"
+              aria-label="Sign out of your account"
+              block
+            >
+              Sign Out
+            </UButton>
           </div>
         </div>
       </UCard>
       
       <!-- Revoke Consent Dialog -->
       <UModal v-model="showRevokeDialog">
-        <UCard>
+        <UCard class="!bg-white">
           <template #header>
-            <h3 class="text-lg font-semibold text-red-600">Revoke Consent</h3>
+            <div class="border-b border-red-200 pb-3">
+              <h3 class="text-lg font-bold text-red-600">Revoke Consent</h3>
+            </div>
           </template>
-          <div class="space-y-4">
-            <p class="text-[#1D3557]">
+          <div class="space-y-4 pt-4">
+            <p class="text-[#1D3557] font-medium">
               Are you sure you want to revoke your consent? This action will:
             </p>
-            <ul class="list-disc list-inside text-[#1D3557] space-y-2">
+            <ul class="list-disc list-inside text-[#1D3557] space-y-2 font-medium">
               <li>Delete all your financial data</li>
               <li>Remove your persona assignment</li>
               <li>Stop generating recommendations</li>
             </ul>
-            <p class="text-sm text-[#457B9D] italic">
+            <p class="text-sm text-[#1D3557] font-semibold">
               This action cannot be undone.
             </p>
             <div class="flex gap-4 justify-end">
@@ -128,6 +147,7 @@ const userEmail = ref<string>('')
 const revoking = ref(false)
 const granting = ref(false)
 const showRevokeDialog = ref(false)
+const loggingOut = ref(false)
 
 const checkConsent = async () => {
   if (!currentUserId.value) return
@@ -239,6 +259,56 @@ const grantConsent = async () => {
     })
   } finally {
     granting.value = false
+  }
+}
+
+const handleLogout = async () => {
+  loggingOut.value = true
+  try {
+    // Get the current session to extract the access token
+    const { data: { session } } = await supabase.auth.getSession()
+    
+    if (session?.access_token) {
+      // Call the logout API endpoint
+      try {
+        await $fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`
+          }
+        })
+      } catch (apiError) {
+        // Log but don't fail if API call fails - we'll still sign out client-side
+        console.warn('Logout API call failed:', apiError)
+      }
+    }
+    
+    // Sign out from Supabase client-side
+    const { error: signOutError } = await supabase.auth.signOut()
+    
+    if (signOutError) {
+      throw signOutError
+    }
+    
+    toast.add({
+      title: 'Signed out',
+      description: 'You have been successfully signed out.',
+      color: 'green'
+    })
+    
+    // Redirect to onboarding page
+    setTimeout(() => {
+      router.push('/onboarding')
+    }, 1000)
+  } catch (error: any) {
+    console.error('Logout error:', error)
+    toast.add({
+      title: 'Error',
+      description: error.message || 'Failed to sign out',
+      color: 'red'
+    })
+  } finally {
+    loggingOut.value = false
   }
 }
 
