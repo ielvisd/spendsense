@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { validateTone } from '~/utils/toneValidation'
 
 export default defineEventHandler(async (event) => {
   try {
@@ -224,25 +225,29 @@ function applyGuardrails(
     return true
   })
   
-  // Tone guardrail: Check for shaming language
-  const shamingKeywords = ['reckless', 'overspending', 'wasteful', 'irresponsible']
+  // Tone guardrail: Validate and sanitize all rationales
   filtered = filtered.map(rec => {
     let rationale = rec.rationale
-    const hasShaming = shamingKeywords.some(keyword => 
-      rationale.toLowerCase().includes(keyword)
-    )
     
-    if (hasShaming) {
-      // Rewrite to remove shaming language
-      rationale = rationale
-        .replace(/reckless/gi, 'opportunities to optimize')
-        .replace(/overspending/gi, 'spending patterns')
-        .replace(/wasteful/gi, 'areas for improvement')
-        .replace(/irresponsible/gi, 'optimization opportunities')
+    // Use comprehensive tone validation
+    const toneResult = validateTone(rationale)
+    
+    if (!toneResult.isValid) {
+      // Use sanitized version if tone issues were found
+      rationale = toneResult.sanitizedText
+      
+      // Log tone issues for operator review (in production, this would go to logs table)
+      console.warn('Tone guardrail triggered:', {
+        original: rec.rationale,
+        issues: toneResult.issues,
+        sanitized: toneResult.sanitizedText
+      })
     }
     
-    // Add disclaimer to all recommendations
-    rationale += ' This is educational content, not financial advice. Consult a licensed advisor.'
+    // Add disclaimer to all recommendations (if not already present)
+    if (!rationale.includes('This is educational content')) {
+      rationale += ' This is educational content, not financial advice. Consult a licensed advisor.'
+    }
     
     return {
       ...rec,
