@@ -17,6 +17,8 @@
           step="0.01"
           placeholder="5000"
           :disabled="calculating"
+          aria-label="Current debt balance in dollars"
+          aria-required="true"
         />
       </UFormField>
       
@@ -29,6 +31,8 @@
           step="0.01"
           placeholder="18.99"
           :disabled="calculating"
+          aria-label="Annual interest rate percentage"
+          aria-required="true"
         />
       </UFormField>
       
@@ -40,19 +44,23 @@
           step="0.01"
           placeholder="200"
           :disabled="calculating"
+          aria-label="Monthly payment amount in dollars"
+          aria-required="true"
         />
       </UFormField>
       
       <UButton
         @click="calculate"
         :loading="calculating"
+        :aria-busy="calculating"
         color="primary"
         block
+        aria-label="Calculate debt payoff timeline"
       >
         Calculate
       </UButton>
       
-      <div v-if="result" class="mt-6 p-4 bg-[#A8DADC] rounded-lg space-y-2">
+      <div v-if="result" class="mt-6 p-4 bg-[#A8DADC] rounded-lg space-y-2" role="region" aria-label="Debt payoff calculation results">
         <div class="flex justify-between">
           <span class="text-[#1D3557] font-medium">Months to Pay Off:</span>
           <span class="text-[#1D3557] font-bold">{{ result.months }}</span>
@@ -79,6 +87,8 @@
         variant="soft"
         :title="error"
         class="mt-4"
+        role="alert"
+        aria-live="assertive"
       />
     </div>
   </UCard>

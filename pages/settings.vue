@@ -27,6 +27,8 @@
               variant="outline"
               @click="showRevokeDialog = true"
               :loading="revoking"
+              :aria-busy="revoking"
+              aria-label="Revoke consent to data processing"
             >
               Revoke Consent
             </UButton>
@@ -37,6 +39,8 @@
               color="primary"
               @click="grantConsent"
               :loading="granting"
+              :aria-busy="granting"
+              aria-label="Grant consent to data processing"
             >
               Grant Consent
             </UButton>
@@ -80,10 +84,20 @@
               This action cannot be undone.
             </p>
             <div class="flex gap-4 justify-end">
-              <UButton variant="outline" @click="showRevokeDialog = false">
+              <UButton 
+                variant="outline" 
+                @click="showRevokeDialog = false"
+                aria-label="Cancel revoking consent"
+              >
                 Cancel
               </UButton>
-              <UButton color="red" @click="revokeConsent" :loading="revoking">
+              <UButton 
+                color="red" 
+                @click="revokeConsent" 
+                :loading="revoking"
+                :aria-busy="revoking"
+                aria-label="Confirm revoke consent and delete data"
+              >
                 Revoke Consent
               </UButton>
             </div>

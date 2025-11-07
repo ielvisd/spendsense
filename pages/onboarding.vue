@@ -5,15 +5,19 @@
         <h1 class="text-3xl font-bold text-[#1D3557] mb-6">Welcome to SpendSense</h1>
         
         <!-- Registration Form -->
-        <UForm v-if="!user" :state="registerForm" @submit="handleRegister" class="space-y-6">
+        <UForm v-if="!user" :state="registerForm" @submit="handleRegister" class="space-y-6" aria-label="Registration form">
           <UFormField label="Email" name="email" required>
             <UInput 
               v-model="registerForm.email" 
               type="email" 
               placeholder="your@email.com"
               color="primary"
+              aria-label="Email address"
+              aria-required="true"
+              aria-describedby="email-description"
             />
           </UFormField>
+          <p id="email-description" class="sr-only">Enter your email address to create an account</p>
           
           <UFormField label="Password" name="password" required>
             <UInput 
@@ -21,10 +25,22 @@
               type="password" 
               placeholder="••••••••"
               color="primary"
+              aria-label="Password"
+              aria-required="true"
+              aria-describedby="password-description"
             />
           </UFormField>
+          <p id="password-description" class="sr-only">Enter a secure password for your account</p>
           
-          <UButton type="submit" :loading="registering" block color="primary" class="bg-[#457B9D] hover:bg-[#3d6d8d] text-white">
+          <UButton 
+            type="submit" 
+            :loading="registering" 
+            :aria-busy="registering"
+            block 
+            color="primary" 
+            class="bg-[#457B9D] hover:bg-[#3d6d8d] text-white"
+            aria-label="Create account"
+          >
             Create Account
           </UButton>
         </UForm>
@@ -42,17 +58,20 @@
               accept=".json,.csv"
               @change="handleFileUpload"
               class="block w-full text-sm text-[#1D3557] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#A8DADC] file:text-[#1D3557] hover:file:bg-[#457B9D] hover:file:text-white"
+              aria-label="Upload financial data file"
+              aria-describedby="file-upload-description"
             />
-            <p class="text-sm text-[#457B9D] mt-2">Supported formats: JSON, CSV</p>
+            <p id="file-upload-description" class="text-sm text-[#457B9D] mt-2">Supported formats: JSON, CSV</p>
             
-            <div v-if="uploadProgress" class="mt-4">
+            <div v-if="uploadProgress" class="mt-4" role="progressbar" aria-valuenow="uploadProgress" aria-valuemin="0" aria-valuemax="100" aria-label="Upload progress">
               <div class="bg-[#A8DADC] rounded-full h-2.5">
                 <div
                   class="bg-[#457B9D] h-2.5 rounded-full transition-all duration-300"
                   :style="{ width: uploadProgress + '%' }"
+                  aria-hidden="true"
                 ></div>
               </div>
-              <p class="text-sm text-[#457B9D] mt-2">{{ uploadProgress }}% complete</p>
+              <p class="text-sm text-[#457B9D] mt-2" aria-live="polite">{{ uploadProgress }}% complete</p>
             </div>
           </div>
           
@@ -61,8 +80,10 @@
             <UCheckbox
               v-model="consentGranted"
               label="I consent to SpendSense analyzing my financial data to provide personalized recommendations"
+              aria-label="Consent to data analysis"
+              aria-describedby="consent-description"
             />
-            <p class="text-sm text-[#1D3557]/70 mt-2">
+            <p id="consent-description" class="text-sm text-[#1D3557]/70 mt-2">
               You can revoke this consent at any time in your settings.
             </p>
           </div>
@@ -71,9 +92,12 @@
             @click="handleConsent"
             :disabled="!consentGranted || !dataUploaded"
             :loading="processing"
+            :aria-busy="processing"
+            :aria-disabled="!consentGranted || !dataUploaded"
             block
             color="primary"
             class="bg-[#457B9D] hover:bg-[#3d6d8d] text-white disabled:opacity-50"
+            aria-label="Complete onboarding and grant consent"
           >
             Complete Onboarding
           </UButton>

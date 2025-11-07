@@ -3,7 +3,7 @@
     <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center mb-8">
         <h1 class="text-3xl font-bold text-[#1D3557]">Your Financial Dashboard</h1>
-        <UButton to="/settings" variant="outline" color="primary">
+        <UButton to="/settings" variant="outline" color="primary" aria-label="Go to settings page">
           Settings
         </UButton>
       </div>
@@ -53,18 +53,25 @@
             </template>
             <p class="text-[#457B9D] mb-2">{{ offer.offer_data?.description }}</p>
             <p class="text-sm text-[#1D3557] font-medium mb-4">{{ offer.rationale }}</p>
-            <UButton variant="outline" size="sm" color="primary">Learn More</UButton>
+            <UButton 
+              variant="outline" 
+              size="sm" 
+              color="primary"
+              :aria-label="`Learn more about ${offer.offer_data?.provider || 'this offer'}`"
+            >
+              Learn More
+            </UButton>
           </UCard>
         </div>
       </div>
       
       <!-- Loading State -->
-      <div v-if="loading" class="text-center py-12">
+      <div v-if="loading" class="text-center py-12" role="status" aria-live="polite" aria-busy="true">
         <p class="text-[#457B9D]">Loading your recommendations...</p>
       </div>
       
       <!-- Error State -->
-      <UAlert v-if="error" color="error" variant="soft" class="mb-8">
+      <UAlert v-if="error" color="error" variant="soft" class="mb-8" role="alert" aria-live="assertive">
         {{ error }}
       </UAlert>
       
@@ -91,6 +98,7 @@
               variant="outline"
               size="sm"
               @click="submitFeedback('rating', { rating })"
+              :aria-label="`Rate ${rating} out of 5 stars`"
             >
               {{ rating }} ⭐
             </UButton>
@@ -100,6 +108,7 @@
               variant="outline"
               size="sm"
               @click="submitFeedback('helpful', { helpful: true })"
+              aria-label="Mark recommendations as helpful"
             >
               Helpful
             </UButton>
@@ -107,6 +116,7 @@
               variant="outline"
               size="sm"
               @click="submitFeedback('not_helpful', { helpful: false })"
+              aria-label="Mark recommendations as not helpful"
             >
               Not Helpful
             </UButton>

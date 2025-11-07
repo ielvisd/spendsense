@@ -17,6 +17,8 @@
           step="0.01"
           placeholder="10000"
           :disabled="calculating"
+          aria-label="Savings goal amount in dollars"
+          aria-required="true"
         />
       </UFormField>
       
@@ -28,6 +30,7 @@
           step="0.01"
           placeholder="1000"
           :disabled="calculating"
+          aria-label="Current savings amount in dollars"
         />
       </UFormField>
       
@@ -40,6 +43,7 @@
           step="0.01"
           placeholder="2.5"
           :disabled="calculating"
+          aria-label="Annual interest rate percentage"
         />
       </UFormField>
       
@@ -51,19 +55,23 @@
           step="1"
           placeholder="12"
           :disabled="calculating"
+          aria-label="Target date in months from now"
+          aria-required="true"
         />
       </UFormField>
       
       <UButton
         @click="calculate"
         :loading="calculating"
+        :aria-busy="calculating"
         color="primary"
         block
+        aria-label="Calculate monthly savings needed"
       >
         Calculate
       </UButton>
       
-      <div v-if="result" class="mt-6 p-4 bg-[#A8DADC] rounded-lg space-y-2">
+      <div v-if="result" class="mt-6 p-4 bg-[#A8DADC] rounded-lg space-y-2" role="region" aria-label="Savings goal calculation results">
         <div class="flex justify-between">
           <span class="text-[#1D3557] font-medium">Monthly Savings Needed:</span>
           <span class="text-[#1D3557] font-bold">${{ result.monthlyPayment.toFixed(2) }}</span>
@@ -90,6 +98,8 @@
         variant="soft"
         :title="error"
         class="mt-4"
+        role="alert"
+        aria-live="assertive"
       />
     </div>
   </UCard>
