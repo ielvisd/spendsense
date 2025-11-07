@@ -90,19 +90,35 @@ export default defineEventHandler(async (event) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey)
     
-    // Ensure storage bucket exists (create if it doesn't)
+    // Check if storage bucket exists (file storage is optional)
     const bucketName = 'data-uploads'
-    const { data: bucketExists } = await supabase.storage.getBucket(bucketName)
-    if (!bucketExists) {
-      // Create bucket if it doesn't exist
-      const { error: bucketError } = await supabase.storage.createBucket(bucketName, {
-        public: false, // Private bucket for user data
-        fileSizeLimit: 52428800, // 50MB max file size
-        allowedMimeTypes: ['application/json', 'text/csv', 'application/csv']
-      })
-      if (bucketError && !bucketError.message.includes('already exists')) {
-        console.warn('Could not create storage bucket:', bucketError.message)
+    let bucketExists = false
+    try {
+      const { data: bucket, error: bucketCheckError } = await supabase.storage.getBucket(bucketName)
+      bucketExists = !!bucket && !bucketCheckError
+      
+      // Only try to create if it doesn't exist and we have permission
+      // Note: Creating buckets requires service role key, so this will fail with anon key
+      // This is fine - file storage is optional for the demo
+      if (!bucketExists) {
+        const { error: bucketError } = await supabase.storage.createBucket(bucketName, {
+          public: false, // Private bucket for user data
+          fileSizeLimit: 52428800, // 50MB max file size
+          allowedMimeTypes: ['application/json', 'text/csv', 'application/csv']
+        })
+        if (bucketError) {
+          // Bucket creation requires admin permissions - this is expected with anon key
+          // File storage will be skipped, but data ingestion will continue
+          if (!bucketError.message.includes('already exists') && !bucketError.message.includes('row-level security')) {
+            console.warn('Storage bucket not available (requires admin setup):', bucketError.message)
+          }
+        } else {
+          bucketExists = true
+        }
       }
+    } catch (e) {
+      // Bucket check/creation failed - continue without file storage
+      console.warn('Storage bucket check failed, continuing without file storage')
     }
     
     // Check if this is a multipart form upload (CSV file)
@@ -130,22 +146,27 @@ export default defineEventHandler(async (event) => {
       fileName = filePart.filename || `upload_${Date.now()}.csv`
       
       // Store file in Supabase Storage
-      const filePath = userId 
-        ? `users/${userId}/${Date.now()}_${fileName}`
-        : `uploads/${Date.now()}_${fileName}`
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from(bucketName)
-        .upload(filePath, filePart.data, {
-          contentType: filePart.type || 'text/csv',
-          upsert: false
-        })
-      
-      if (uploadError) {
-        console.warn('File storage failed:', uploadError.message)
-        // Continue with processing even if storage fails
+      // Only try to store file if bucket exists
+      if (bucketExists) {
+        const filePath = userId
+          ? `users/${userId}/${Date.now()}_${fileName}`
+          : `uploads/${Date.now()}_${fileName}`
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, filePart.data, {
+            contentType: filePart.type || 'text/csv',
+            upsert: false
+          })
+        
+        if (uploadError) {
+          console.warn('File storage failed (continuing without file storage):', uploadError.message)
+          // Continue with processing even if storage fails
+        } else {
+          storedFilePath = uploadData.path
+        }
       } else {
-        storedFilePath = uploadData.path
+        console.warn('Storage bucket not available - file will not be stored, but data will be processed')
       }
       
       // Parse CSV
@@ -186,8 +207,8 @@ export default defineEventHandler(async (event) => {
         })
       }
       
-      // Store JSON data as file if we have it
-      if (usersData && !storedFilePath && userId) {
+      // Store JSON data as file if we have it and bucket exists
+      if (usersData && !storedFilePath && userId && bucketExists) {
         fileName = `data_${Date.now()}.json`
         const filePath = `users/${userId}/${fileName}`
         const jsonBuffer = Buffer.from(JSON.stringify(usersData, null, 2))
@@ -201,6 +222,8 @@ export default defineEventHandler(async (event) => {
         
         if (!uploadError) {
           storedFilePath = uploadData.path
+        } else {
+          console.warn('File storage failed (continuing without file storage):', uploadError.message)
         }
       }
     }
