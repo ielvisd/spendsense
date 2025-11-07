@@ -132,13 +132,14 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useSupabaseClient } from '#imports'
+import { useSupabaseClient, useToast } from '#imports'
 
 definePageMeta({
   middleware: 'auth'
 })
 
 const supabase = useSupabaseClient()
+const toast = useToast()
 
 const loading = ref(false)
 const users = ref<any[]>([])
@@ -270,18 +271,34 @@ const applyFilters = () => {
 const approveRecommendation = async (recId: string) => {
   try {
     // In a real implementation, this would update the recommendation
-    alert('Recommendation approved (implementation pending)')
+    toast.add({
+      title: 'Recommendation approved',
+      description: 'This recommendation has been marked as approved.',
+      color: 'green'
+    })
   } catch (error: any) {
-    alert('Error: ' + error.message)
+    toast.add({
+      title: 'Error',
+      description: error.message,
+      color: 'red'
+    })
   }
 }
 
 const flagRecommendation = async (recId: string) => {
   try {
     // In a real implementation, this would flag the recommendation
-    alert('Recommendation flagged (implementation pending)')
+    toast.add({
+      title: 'Recommendation flagged',
+      description: 'This recommendation has been flagged for review.',
+      color: 'orange'
+    })
   } catch (error: any) {
-    alert('Error: ' + error.message)
+    toast.add({
+      title: 'Error',
+      description: error.message,
+      color: 'red'
+    })
   }
 }
 

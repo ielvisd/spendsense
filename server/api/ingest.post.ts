@@ -1,6 +1,81 @@
 import { createClient } from '@supabase/supabase-js'
 import type { UserWithData } from '~/utils/generateData'
 
+// Simple CSV parser for transaction data
+function parseCSV(csvText: string): UserWithData[] {
+  const lines = csvText.split('\n').filter(line => line.trim())
+  if (lines.length < 2) {
+    throw new Error('CSV file must have at least a header row and one data row')
+  }
+  
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
+  
+  // Expected CSV format: user_id, fake_name, email, date, amount, merchant_name, account_type, category
+  // Group transactions by user
+  const userMap = new Map<string, any>()
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim())
+    const row: Record<string, string> = {}
+    headers.forEach((header, idx) => {
+      row[header] = values[idx] || ''
+    })
+    
+    const userId = row.user_id || row['user id'] || `user_${i}`
+    const fakeName = row.fake_name || row.name || `User ${i}`
+    
+    if (!userMap.has(userId)) {
+      userMap.set(userId, {
+        id: userId,
+        fake_name: fakeName,
+        demographics: {
+          age: parseInt(row.age) || 30,
+          gender: row.gender || 'other',
+          income_range: row.income_range || '$50k-$75k',
+          ethnicity: row.ethnicity || 'prefer_not_to_say'
+        },
+        accounts: [],
+        transactions: [],
+        liabilities: []
+      })
+    }
+    
+    const user = userMap.get(userId)
+    
+    // Create account if not exists
+    const accountType = row.account_type || row.type || 'checking'
+    let account = user.accounts.find((a: any) => a.type === accountType)
+    if (!account) {
+      account = {
+        account_id: `${userId}_${accountType}`,
+        type: accountType,
+        subtype: null,
+        balances: {
+          current: 0,
+          available: 0
+        },
+        iso_currency_code: 'USD'
+      }
+      user.accounts.push(account)
+    }
+    
+    // Add transaction
+    if (row.date && row.amount) {
+      user.transactions.push({
+        account_id: account.account_id,
+        date: row.date,
+        amount: parseFloat(row.amount) || 0,
+        merchant_name: row.merchant_name || row.merchant || null,
+        payment_channel: row.payment_channel || 'other',
+        personal_finance_category: row.category || row.personal_finance_category || null,
+        pending: false
+      })
+    }
+  }
+  
+  return Array.from(userMap.values())
+}
+
 export default defineEventHandler(async (event) => {
   try {
     const supabaseUrl = process.env.SUPABASE_URL || 'https://uiheuojorgugxboadzas.supabase.co'
@@ -15,27 +90,39 @@ export default defineEventHandler(async (event) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey)
     
-    // Get the request body
-    const body = await readBody(event)
-    
-    // Support both file upload and direct JSON
+    // Check if this is a multipart form upload (CSV file)
+    const contentType = getHeader(event, 'content-type') || ''
     let usersData: UserWithData[]
     
-    if (body.file) {
-      // Handle file upload (would need multipart form handling)
-      throw createError({
-        statusCode: 400,
-        message: 'File upload not yet implemented. Please send JSON data directly.'
-      })
-    } else if (body.data) {
-      usersData = body.data
-    } else if (Array.isArray(body)) {
-      usersData = body
+    if (contentType.includes('multipart/form-data')) {
+      // Handle CSV file upload
+      const formData = await readMultipartFormData(event)
+      const filePart = formData?.find(part => part.name === 'file')
+      
+      if (!filePart || !filePart.data) {
+        throw createError({
+          statusCode: 400,
+          message: 'No file provided in upload'
+        })
+      }
+      
+      // Parse CSV
+      const csvText = Buffer.from(filePart.data).toString('utf-8')
+      usersData = parseCSV(csvText)
     } else {
-      throw createError({
-        statusCode: 400,
-        message: 'Invalid request format. Expected array of user data or { data: [...] }'
-      })
+      // Handle JSON body
+      const body = await readBody(event)
+      
+      if (body.data) {
+        usersData = body.data
+      } else if (Array.isArray(body)) {
+        usersData = body
+      } else {
+        throw createError({
+          statusCode: 400,
+          message: 'Invalid request format. Expected array of user data or { data: [...] }'
+        })
+      }
     }
     
     // Validate data structure

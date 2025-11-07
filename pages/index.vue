@@ -1,7 +1,12 @@
 <template>
   <div class="min-h-screen bg-[#F1FAEE]">
     <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <h1 class="text-3xl font-bold text-[#1D3557] mb-8">Your Financial Dashboard</h1>
+      <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold text-[#1D3557]">Your Financial Dashboard</h1>
+        <UButton to="/settings" variant="outline" color="primary">
+          Settings
+        </UButton>
+      </div>
       
       <!-- Persona Card -->
       <UCard v-if="persona" class="mb-8">
@@ -62,6 +67,43 @@
       <UAlert v-if="error" color="error" variant="soft" class="mb-8">
         {{ error }}
       </UAlert>
+      
+      <!-- Feedback Section -->
+      <UCard class="mt-8">
+        <template #header>
+          <h2 class="text-xl font-semibold">Help Us Improve</h2>
+        </template>
+        <div class="space-y-4">
+          <p class="text-[#457B9D]">How helpful are these recommendations?</p>
+          <div class="flex gap-2 flex-wrap">
+            <UButton
+              v-for="rating in [1, 2, 3, 4, 5]"
+              :key="rating"
+              variant="outline"
+              size="sm"
+              @click="submitFeedback('rating', { rating })"
+            >
+              {{ rating }} ⭐
+            </UButton>
+          </div>
+          <div class="flex gap-2 mt-4">
+            <UButton
+              variant="outline"
+              size="sm"
+              @click="submitFeedback('helpful', { helpful: true })"
+            >
+              Helpful
+            </UButton>
+            <UButton
+              variant="outline"
+              size="sm"
+              @click="submitFeedback('not_helpful', { helpful: false })"
+            >
+              Not Helpful
+            </UButton>
+          </div>
+        </div>
+      </UCard>
     </div>
   </div>
 </template>
@@ -74,8 +116,10 @@ import { ref, computed, onMounted } from 'vue'
 import { useSupabaseClient } from '#imports'
 import { usePersonas } from '~/composables/usePersonas'
 import { useRecommendations } from '~/composables/useRecommendations'
+import { useToast } from '#imports'
 
 const supabase = useSupabaseClient()
+const toast = useToast()
 const { getPersona } = usePersonas()
 const { fetchRecommendations } = useRecommendations()
 
@@ -83,6 +127,7 @@ const persona = ref<any>(null)
 const recommendations = ref<any>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
+const currentUserId = ref<string | null>(null)
 
 const personaTypeLabel = computed(() => {
   if (!persona.value) return ''
@@ -96,6 +141,33 @@ const personaTypeLabel = computed(() => {
   return labels[persona.value.persona_type] || persona.value.persona_type
 })
 
+const submitFeedback = async (actionType: string, feedbackData: any) => {
+  if (!currentUserId.value) return
+  
+  try {
+    await $fetch('/api/feedback', {
+      method: 'POST',
+      body: {
+        user_id: currentUserId.value,
+        action_type: actionType,
+        feedback_data: feedbackData
+      }
+    })
+    
+    toast.add({
+      title: 'Thank you!',
+      description: 'Your feedback helps us improve.',
+      color: 'green'
+    })
+  } catch (err: any) {
+    toast.add({
+      title: 'Error',
+      description: 'Failed to submit feedback',
+      color: 'red'
+    })
+  }
+}
+
 onMounted(async () => {
   try {
     // Get current user
@@ -105,6 +177,8 @@ onMounted(async () => {
       loading.value = false
       return
     }
+    
+    currentUserId.value = user.id
     
     // Get persona
     const { data: personaData } = await supabase

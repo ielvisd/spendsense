@@ -34,15 +34,16 @@
           <div>
             <h2 class="text-xl font-semibold mb-4 text-[#1D3557]">Upload Your Data</h2>
             <p class="text-[#457B9D] mb-4">
-              Upload your synthetic transaction data (JSON format) to get started.
+              Upload your synthetic transaction data (JSON or CSV format) to get started.
             </p>
             
             <input
               type="file"
-              accept=".json"
+              accept=".json,.csv"
               @change="handleFileUpload"
               class="block w-full text-sm text-[#1D3557] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#A8DADC] file:text-[#1D3557] hover:file:bg-[#457B9D] hover:file:text-white"
             />
+            <p class="text-sm text-[#457B9D] mt-2">Supported formats: JSON, CSV</p>
             
             <div v-if="uploadProgress" class="mt-4">
               <div class="bg-[#A8DADC] rounded-full h-2.5">
@@ -86,6 +87,7 @@
 import { ref } from 'vue'
 import { useSupabaseClient } from '#imports'
 import { useRouter } from 'vue-router'
+import { useToast } from '#imports'
 
 definePageMeta({
   layout: false
@@ -93,6 +95,7 @@ definePageMeta({
 
 const supabase = useSupabaseClient()
 const router = useRouter()
+const toast = useToast()
 
 const user = ref(null)
 const registering = ref(false)
@@ -118,8 +121,17 @@ const handleRegister = async (event: any) => {
     if (error) throw error
     
     user.value = data.user
+    toast.add({
+      title: 'Account created!',
+      description: 'Please upload your data to continue.',
+      color: 'green'
+    })
   } catch (error: any) {
-    alert('Registration failed: ' + error.message)
+    toast.add({
+      title: 'Registration failed',
+      description: error.message,
+      color: 'red'
+    })
   } finally {
     registering.value = false
   }
@@ -133,9 +145,35 @@ const handleFileUpload = async (event: Event) => {
   uploadProgress.value = 10
   
   try {
-    // Read file
     const text = await file.text()
-    const data = JSON.parse(text)
+    let data: any
+    
+    // Handle CSV files
+    if (file.name.endsWith('.csv')) {
+      uploadProgress.value = 20
+      // Send CSV file to server for parsing
+      const formData = new FormData()
+      formData.append('file', file)
+      
+      const response = await $fetch('/api/ingest', {
+        method: 'POST',
+        body: formData
+      })
+      
+      uploadProgress.value = 100
+      dataUploaded.value = true
+      
+      toast.add({
+        title: 'Upload successful!',
+        description: `Successfully uploaded data for ${response.results.users} users`,
+        color: 'green'
+      })
+      return
+    }
+    
+    // Handle JSON files
+    uploadProgress.value = 20
+    data = JSON.parse(text)
     
     uploadProgress.value = 30
     
@@ -148,9 +186,17 @@ const handleFileUpload = async (event: Event) => {
     uploadProgress.value = 100
     dataUploaded.value = true
     
-    alert(`Successfully uploaded data for ${response.results.users} users`)
+    toast.add({
+      title: 'Upload successful!',
+      description: `Successfully uploaded data for ${response.results.users} users`,
+      color: 'green'
+    })
   } catch (error: any) {
-    alert('Upload failed: ' + error.message)
+    toast.add({
+      title: 'Upload failed',
+      description: error.message,
+      color: 'red'
+    })
   } finally {
     processing.value = false
     uploadProgress.value = 0
@@ -188,9 +234,22 @@ const handleConsent = async () => {
       body: { user_id: currentUser.id }
     })
     
-    router.push('/')
+    toast.add({
+      title: 'Onboarding complete!',
+      description: 'Redirecting to your dashboard...',
+      color: 'green'
+    })
+    
+    // Small delay to show toast before redirect
+    setTimeout(() => {
+      router.push('/')
+    }, 1000)
   } catch (error: any) {
-    alert('Error: ' + error.message)
+    toast.add({
+      title: 'Error',
+      description: error.message,
+      color: 'red'
+    })
   } finally {
     processing.value = false
   }
