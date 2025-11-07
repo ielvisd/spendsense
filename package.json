@@ -1,0 +1,27 @@
+{
+  "name": "spendsense",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "node utils/generateData.ts",
+    "eval": "node utils/evalHarness.ts",
+    "test": "vitest",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^10.1.0",
+    "@nuxt/ui": "^4.1.0",
+    "@nuxtjs/supabase": "^2.0.1",
+    "@supabase/supabase-js": "^2.80.0",
+    "date-fns": "^4.1.0",
+    "lodash": "^4.17.21",
+    "nuxt": "^4.2.0",
+    "tailwindcss": "^4.1.17",
+    "vitest": "^4.0.7",
+    "vue": "^3.5.22",
+    "vue-router": "^4.6.3"
+  }
+}
