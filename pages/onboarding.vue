@@ -1,20 +1,30 @@
 <template>
-  <div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+  <div class="min-h-screen bg-[#F1FAEE] py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-2xl mx-auto">
-      <div class="bg-white shadow rounded-lg p-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-6">Welcome to SpendSense</h1>
+      <div class="bg-white shadow-lg rounded-lg p-8 border border-[#A8DADC]">
+        <h1 class="text-3xl font-bold text-[#1D3557] mb-6">Welcome to SpendSense</h1>
         
         <!-- Registration Form -->
-        <UForm v-if="!user" @submit="handleRegister" class="space-y-6">
+        <UForm v-if="!user" :state="registerForm" @submit="handleRegister" class="space-y-6">
           <UFormField label="Email" name="email" required>
-            <UInput v-model="registerForm.email" type="email" placeholder="your@email.com" />
+            <UInput 
+              v-model="registerForm.email" 
+              type="email" 
+              placeholder="your@email.com"
+              color="primary"
+            />
           </UFormField>
           
           <UFormField label="Password" name="password" required>
-            <UInput v-model="registerForm.password" type="password" placeholder="••••••••" />
+            <UInput 
+              v-model="registerForm.password" 
+              type="password" 
+              placeholder="••••••••"
+              color="primary"
+            />
           </UFormField>
           
-          <UButton type="submit" :loading="registering" block>
+          <UButton type="submit" :loading="registering" block color="primary" class="bg-[#457B9D] hover:bg-[#3d6d8d] text-white">
             Create Account
           </UButton>
         </UForm>
@@ -22,8 +32,8 @@
         <!-- Data Upload -->
         <div v-else class="space-y-6">
           <div>
-            <h2 class="text-xl font-semibold mb-4">Upload Your Data</h2>
-            <p class="text-gray-600 mb-4">
+            <h2 class="text-xl font-semibold mb-4 text-[#1D3557]">Upload Your Data</h2>
+            <p class="text-[#457B9D] mb-4">
               Upload your synthetic transaction data (JSON format) to get started.
             </p>
             
@@ -31,17 +41,17 @@
               type="file"
               accept=".json"
               @change="handleFileUpload"
-              class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              class="block w-full text-sm text-[#1D3557] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#A8DADC] file:text-[#1D3557] hover:file:bg-[#457B9D] hover:file:text-white"
             />
             
             <div v-if="uploadProgress" class="mt-4">
-              <div class="bg-gray-200 rounded-full h-2.5">
+              <div class="bg-[#A8DADC] rounded-full h-2.5">
                 <div
-                  class="bg-blue-600 h-2.5 rounded-full"
+                  class="bg-[#457B9D] h-2.5 rounded-full transition-all duration-300"
                   :style="{ width: uploadProgress + '%' }"
                 ></div>
               </div>
-              <p class="text-sm text-gray-600 mt-2">{{ uploadProgress }}% complete</p>
+              <p class="text-sm text-[#457B9D] mt-2">{{ uploadProgress }}% complete</p>
             </div>
           </div>
           
@@ -51,7 +61,7 @@
               v-model="consentGranted"
               label="I consent to SpendSense analyzing my financial data to provide personalized recommendations"
             />
-            <p class="text-sm text-gray-500 mt-2">
+            <p class="text-sm text-[#1D3557]/70 mt-2">
               You can revoke this consent at any time in your settings.
             </p>
           </div>
@@ -61,6 +71,8 @@
             :disabled="!consentGranted || !dataUploaded"
             :loading="processing"
             block
+            color="primary"
+            class="bg-[#457B9D] hover:bg-[#3d6d8d] text-white disabled:opacity-50"
           >
             Complete Onboarding
           </UButton>
@@ -94,12 +106,13 @@ const registerForm = ref({
   password: ''
 })
 
-const handleRegister = async () => {
+const handleRegister = async (event: any) => {
   registering.value = true
   try {
+    const formData = event.data || registerForm.value
     const { data, error } = await supabase.auth.signUp({
-      email: registerForm.value.email,
-      password: registerForm.value.password
+      email: formData.email,
+      password: formData.password
     })
     
     if (error) throw error

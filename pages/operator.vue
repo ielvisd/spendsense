@@ -1,9 +1,9 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-[#F1FAEE]">
     <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
       <div class="flex justify-between items-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">Operator Dashboard</h1>
-        <UButton @click="refreshData" :loading="loading">Refresh</UButton>
+        <h1 class="text-3xl font-bold text-[#1D3557]">Operator Dashboard</h1>
+        <UButton @click="refreshData" :loading="loading" color="primary">Refresh</UButton>
       </div>
       
       <!-- Filters -->
@@ -75,44 +75,44 @@
                   <div
                     v-for="signal in user.signals"
                     :key="signal.id"
-                    class="p-2 bg-gray-50 rounded"
+                    class="p-2 bg-[#A8DADC]/30 rounded border border-[#A8DADC]"
                   >
-                    <p class="font-medium">{{ signal.signal_type }}</p>
-                    <pre class="text-xs text-gray-600 mt-1">{{ JSON.stringify(signal.signal_data, null, 2) }}</pre>
+                    <p class="font-medium text-[#1D3557]">{{ signal.signal_type }}</p>
+                    <pre class="text-xs text-[#457B9D] mt-1">{{ JSON.stringify(signal.signal_data, null, 2) }}</pre>
                   </div>
                 </div>
               </div>
               
               <!-- Persona Rationale -->
               <div v-if="user.persona">
-                <h3 class="font-semibold mb-2">Persona Rationale</h3>
-                <p class="text-gray-600">{{ user.persona.rationale }}</p>
+                <h3 class="font-semibold mb-2 text-[#1D3557]">Persona Rationale</h3>
+                <p class="text-[#457B9D]">{{ user.persona.rationale }}</p>
               </div>
               
               <!-- Recommendations -->
               <div>
-                <h3 class="font-semibold mb-2">Recommendations</h3>
+                <h3 class="font-semibold mb-2 text-[#1D3557]">Recommendations</h3>
                 <div class="space-y-2">
                   <div
                     v-for="rec in user.recommendations"
                     :key="rec.id"
-                    class="p-2 border rounded flex justify-between items-center"
+                    class="p-2 border border-[#A8DADC] rounded flex justify-between items-center bg-white"
                   >
                     <div>
-                      <p class="font-medium">{{ rec.rationale.substring(0, 100) }}...</p>
-                      <p class="text-xs text-gray-500">{{ new Date(rec.created_at).toLocaleDateString() }}</p>
+                      <p class="font-medium text-[#1D3557]">{{ rec.rationale.substring(0, 100) }}...</p>
+                      <p class="text-xs text-[#457B9D]/70">{{ new Date(rec.created_at).toLocaleDateString() }}</p>
                     </div>
                     <div class="flex gap-2">
                       <UButton
                         size="xs"
-                        color="green"
+                        color="primary"
                         @click="approveRecommendation(rec.id)"
                       >
                         Approve
                       </UButton>
                       <UButton
                         size="xs"
-                        color="red"
+                        color="error"
                         variant="outline"
                         @click="flagRecommendation(rec.id)"
                       >

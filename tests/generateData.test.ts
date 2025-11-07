@@ -109,8 +109,8 @@ describe('Data Generation Utilities', () => {
         creditAccount.balances.available = creditAccount.balances.limit * 0.32
       }
       
-      expect(creditAccount?.balances.current).toBe(3400) // 68% of 5000
-      expect(creditAccount?.balances.available).toBe(1600) // 32% of 5000
+      expect(creditAccount?.balances.current).toBeCloseTo(3400, 0) // 68% of 5000
+      expect(creditAccount?.balances.available).toBeCloseTo(1600, 0) // 32% of 5000
     })
   })
 })

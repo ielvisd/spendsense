@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-[#F1FAEE]">
     <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <h1 class="text-3xl font-bold text-gray-900 mb-8">Your Financial Dashboard</h1>
+      <h1 class="text-3xl font-bold text-[#1D3557] mb-8">Your Financial Dashboard</h1>
       
       <!-- Persona Card -->
       <UCard v-if="persona" class="mb-8">
@@ -10,7 +10,7 @@
         </template>
         <div>
           <p class="text-lg font-medium mb-2">{{ personaTypeLabel }}</p>
-          <p class="text-gray-600">{{ persona.rationale }}</p>
+          <p class="text-[#457B9D]">{{ persona.rationale }}</p>
         </div>
       </UCard>
       
@@ -26,8 +26,8 @@
             <template #header>
               <h3 class="font-semibold">{{ item.title || 'Financial Tip' }}</h3>
             </template>
-            <p class="text-gray-600 mb-4">{{ item.rationale }}</p>
-            <p class="text-sm text-gray-500 italic">
+            <p class="text-[#457B9D] mb-4">{{ item.rationale }}</p>
+            <p class="text-sm text-[#1D3557]/70 italic">
               This is educational content, not financial advice. Consult a licensed advisor.
             </p>
           </UCard>
@@ -46,20 +46,20 @@
             <template #header>
               <h3 class="font-semibold">{{ offer.offer_data?.provider || 'Offer' }}</h3>
             </template>
-            <p class="text-gray-600 mb-2">{{ offer.offer_data?.description }}</p>
-            <p class="text-sm text-gray-700 font-medium mb-4">{{ offer.rationale }}</p>
-            <UButton variant="outline" size="sm">Learn More</UButton>
+            <p class="text-[#457B9D] mb-2">{{ offer.offer_data?.description }}</p>
+            <p class="text-sm text-[#1D3557] font-medium mb-4">{{ offer.rationale }}</p>
+            <UButton variant="outline" size="sm" color="primary">Learn More</UButton>
           </UCard>
         </div>
       </div>
       
       <!-- Loading State -->
       <div v-if="loading" class="text-center py-12">
-        <p class="text-gray-600">Loading your recommendations...</p>
+        <p class="text-[#457B9D]">Loading your recommendations...</p>
       </div>
       
       <!-- Error State -->
-      <UAlert v-if="error" color="red" variant="soft" class="mb-8">
+      <UAlert v-if="error" color="error" variant="soft" class="mb-8">
         {{ error }}
       </UAlert>
     </div>
