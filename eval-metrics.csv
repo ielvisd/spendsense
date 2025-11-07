@@ -1,0 +1,4 @@
+Metric,Value,Percentage,Target,Status
+Coverage,0/0,0.0%,100%,FAIL
+Explainability,0/0,0.0%,100%,FAIL
+Auditability,0/0,0.0%,100%,FAIL

@@ -265,7 +265,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useSupabaseClient, useToast } from '#imports'
 
 definePageMeta({
-  middleware: 'auth'
+  middleware: ['auth', 'operator']
 })
 
 const supabase = useSupabaseClient()
@@ -642,7 +642,45 @@ const setupRealtime = () => {
   }
 }
 
+const checkOperatorAccess = async () => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return false
+    }
+    
+    // Verify operator access by attempting to query all users
+    // RLS policies should restrict this to operators only
+    const { data, error } = await supabase
+      .from('users')
+      .select('id')
+      .limit(1)
+    
+    if (error) {
+      console.error('Operator access check failed:', error)
+      return false
+    }
+    
+    return true
+  } catch (error) {
+    console.error('Operator access check error:', error)
+    return false
+  }
+}
+
 onMounted(async () => {
+  // Check operator access
+  const hasAccess = await checkOperatorAccess()
+  if (!hasAccess) {
+    toast.add({
+      title: 'Access Denied',
+      description: 'You do not have permission to access the operator dashboard.',
+      color: 'red'
+    })
+    await navigateTo('/')
+    return
+  }
+  
   // Get current user (operator)
   const { data: { user } } = await supabase.auth.getUser()
   if (user) {

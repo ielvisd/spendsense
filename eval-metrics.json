@@ -1,0 +1,27 @@
+{
+  "coverage": {
+    "users_with_persona": 0,
+    "users_with_3plus_behaviors": 0,
+    "total_users": 0,
+    "percentage": 0
+  },
+  "explainability": {
+    "recommendations_with_rationales": 0,
+    "total_recommendations": 0,
+    "percentage": 0
+  },
+  "auditability": {
+    "recommendations_with_traces": 0,
+    "total_recommendations": 0,
+    "percentage": 0
+  },
+  "fairness": {
+    "persona_distribution": {},
+    "demographic_breakdown": {
+      "by_age": {},
+      "by_gender": {},
+      "by_income": {},
+      "by_ethnicity": {}
+    }
+  }
+}
