@@ -14,6 +14,11 @@ export default defineNuxtConfig({
   
   supabase: {
     redirect: false,
+    redirectOptions: {
+      login: '/',
+      callback: '/',
+      exclude: ['/onboarding', '/settings']
+    },
     url: process.env.SUPABASE_URL,
     key: process.env.SUPABASE_ANON_KEY
   },
