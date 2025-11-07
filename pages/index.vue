@@ -68,6 +68,15 @@
         {{ error }}
       </UAlert>
       
+      <!-- Financial Calculators -->
+      <div class="mb-8">
+        <h2 class="text-2xl font-semibold mb-4">Financial Calculators</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <DebtPayoffCalculator />
+          <SavingsGoalCalculator />
+        </div>
+      </div>
+      
       <!-- Feedback Section -->
       <UCard class="mt-8">
         <template #header>
