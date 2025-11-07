@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { assignPersona } from '../utils/personaAssignment'
-import type { Signal, Account, Liability, Transaction } from '../utils/personaAssignment'
+import type { Signal, Account, Liability, Transaction } from '../utils/types'
 
 describe('Persona Assignment Logic', () => {
   describe('Persona 1: High Utilization', () => {

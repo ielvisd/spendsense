@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { detectSubscriptions, detectSavings, detectCredit, detectIncome } from '../utils/signalDetection'
-import type { Transaction, Account, Liability } from '../utils/signalDetection'
+import type { Transaction, Account, Liability } from '../utils/types'
 import { subMonths } from 'date-fns'
 
 describe('Signal Detection Logic', () => {

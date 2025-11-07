@@ -1,6 +1,20 @@
 import { createClient } from '@supabase/supabase-js'
 import { validateTone } from '~/utils/toneValidation'
 
+/**
+ * Recommendations API Endpoint
+ * 
+ * Generates personalized financial education recommendations based on:
+ * - User's assigned persona (determines content type)
+ * - Detected behavioral signals (used for rationale generation)
+ * - User's account types (for eligibility filtering)
+ * 
+ * Guardrails applied:
+ * - Consent enforcement (must have granted consent)
+ * - Eligibility checks (skip offers user already has)
+ * - Tone validation (sanitize shaming language)
+ * - Disclaimer enforcement (add to all recommendations)
+ */
 export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event)
@@ -17,7 +31,7 @@ export default defineEventHandler(async (event) => {
     const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpaGV1b2pvcmd1Z3hib2FkemFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0Nzc4MjQsImV4cCI6MjA3ODA1MzgyNH0.s4NOKH-9t2CfgNhhzNITwHqNNx4nf-FYVDEItYy4YcI'
     const supabase = createClient(supabaseUrl, supabaseKey)
     
-    // Check consent
+    // Guardrail 1: Consent enforcement - block processing without opt-in
     const { data: consent } = await supabase
       .from('consent')
       .select('consent_status')
@@ -31,7 +45,7 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    // Get persona
+    // Get persona - required for content targeting
     const { data: persona } = await supabase
       .from('personas')
       .select('*')
@@ -45,26 +59,27 @@ export default defineEventHandler(async (event) => {
       })
     }
     
-    // Get signals for rationale generation
+    // Get signals for rationale generation (data citations)
     const { data: signals } = await supabase
       .from('signals')
       .select('*')
       .eq('user_id', userId)
     
-    // Get accounts for eligibility checks
+    // Get accounts for eligibility checks (e.g., skip HYSA if user has savings)
     const { data: accounts } = await supabase
       .from('accounts')
       .select('*')
       .eq('user_id', userId)
     
-    // Get content for persona
+    // Get content catalog filtered by persona type
+    // Content can be persona-specific or general (persona_target = null)
     const { data: content } = await supabase
       .from('content')
       .select('*')
       .or(`persona_target.eq.${persona.persona_type},persona_target.is.null`)
       .limit(10)
     
-    // Generate recommendations
+    // Generate recommendations: 3-5 education items + 1-3 offers
     const recommendations = generateRecommendations(
       persona,
       signals || [],
@@ -72,7 +87,7 @@ export default defineEventHandler(async (event) => {
       content || []
     )
     
-    // Apply guardrails
+    // Apply guardrails: eligibility + tone validation + disclaimer
     const filteredRecommendations = applyGuardrails(recommendations, accounts || [])
     
     // Store recommendations

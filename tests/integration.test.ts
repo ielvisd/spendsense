@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { assignPersona } from '../utils/personaAssignment'
 import { detectSubscriptions, detectSavings, detectCredit, detectIncome } from '../utils/signalDetection'
-import type { Signal, Account, Liability, Transaction } from '../utils/personaAssignment'
+import type { Signal, Account, Liability, Transaction } from '../utils/types'
 
 describe('Integration Tests', () => {
   describe('Full User Flow: Signal Detection + Persona Assignment', () => {

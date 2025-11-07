@@ -1,9 +1,9 @@
 <template>
   <div class="min-h-screen bg-[#F1FAEE]">
     <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between items-center mb-8">
-        <h1 class="text-3xl font-bold text-[#1D3557]">Your Financial Dashboard</h1>
-        <UButton to="/settings" variant="outline" color="primary" aria-label="Go to settings page">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <h1 class="text-2xl sm:text-3xl font-bold text-[#1D3557]">Your Financial Dashboard</h1>
+        <UButton to="/settings" variant="outline" color="primary" aria-label="Go to settings page" class="w-full sm:w-auto">
           Settings
         </UButton>
       </div>

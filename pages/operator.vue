@@ -1,14 +1,15 @@
 <template>
   <div class="min-h-screen bg-[#F1FAEE]">
     <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <div class="flex justify-between items-center mb-8">
-        <h1 class="text-3xl font-bold text-[#1D3557]">Operator Dashboard</h1>
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <h1 class="text-2xl sm:text-3xl font-bold text-[#1D3557]">Operator Dashboard</h1>
         <UButton 
           @click="refreshData" 
           :loading="loading" 
           :aria-busy="loading"
           color="primary"
           aria-label="Refresh user data"
+          class="w-full sm:w-auto"
         >
           Refresh
         </UButton>
@@ -88,11 +89,12 @@
               </div>
             </div>
             
-            <UTable
-              :rows="filteredUsers"
-              :columns="columns"
-              class="w-full"
-            >
+            <div class="overflow-x-auto">
+              <UTable
+                :rows="filteredUsers"
+                :columns="columns"
+                class="w-full min-w-[640px]"
+              >
           <template #persona-data="{ row }">
             <UBadge :color="getPersonaColor(row.persona?.persona_type)">
               {{ row.persona?.persona_type || 'Not Assigned' }}
@@ -109,6 +111,7 @@
             </UButton>
           </template>
         </UTable>
+            </div>
         
         <!-- Expanded Row Content -->
         <div v-for="user in filteredUsers" :key="user.user.id">

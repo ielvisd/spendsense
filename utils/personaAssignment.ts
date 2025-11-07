@@ -5,39 +5,11 @@
  * for testability. It implements the priority-based persona assignment rules.
  */
 
+import type { Signal, Account, Liability, Transaction } from './types'
+
 export interface PersonaResult {
   type: string
   rationale: string
-}
-
-export interface Signal {
-  signal_type: string
-  signal_data: any
-}
-
-export interface Account {
-  id?: string
-  account_id?: string
-  type: string
-  subtype?: string
-  balances?: {
-    current?: number
-    limit?: number
-  }
-}
-
-export interface Liability {
-  type: string
-  overdue?: boolean
-  min_payment?: boolean
-  interest_rate?: number
-  apr?: number
-}
-
-export interface Transaction {
-  amount: number
-  merchant_name?: string
-  date: string
 }
 
 /**
