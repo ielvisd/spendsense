@@ -169,27 +169,38 @@ const handleFileUpload = async (event: Event) => {
   uploadProgress.value = 10
   
   try {
-    const text = await file.text()
-    let data: any
+    // Get current user ID for file storage
+    let currentUserId: string | null = null
+    if (user.value?.id) {
+      currentUserId = user.value.id
+    } else {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      currentUserId = authUser?.id || null
+    }
     
     // Handle CSV files
     if (file.name.endsWith('.csv')) {
       uploadProgress.value = 20
-      // Send CSV file to server for parsing
+      // Send CSV file to server for parsing and storage
       const formData = new FormData()
       formData.append('file', file)
       
       const response = await $fetch('/api/ingest', {
         method: 'POST',
-        body: formData
+        body: formData,
+        params: currentUserId ? { user_id: currentUserId } : {}
       })
       
       uploadProgress.value = 100
       dataUploaded.value = true
       
+      const fileInfo = response.file_stored 
+        ? ` File stored: ${response.file_name || 'uploaded file'}`
+        : ''
+      
       toast.add({
         title: 'Upload successful!',
-        description: `Successfully uploaded data for ${response.results.users} users`,
+        description: `Successfully uploaded data for ${response.results.users} users.${fileInfo}`,
         color: 'green'
       })
       return
@@ -197,22 +208,28 @@ const handleFileUpload = async (event: Event) => {
     
     // Handle JSON files
     uploadProgress.value = 20
-    data = JSON.parse(text)
+    const text = await file.text()
+    const data = JSON.parse(text)
     
     uploadProgress.value = 30
     
-    // Upload to server
+    // Upload to server (will store file automatically)
     const response = await $fetch('/api/ingest', {
       method: 'POST',
-      body: { data }
+      body: { data },
+      params: currentUserId ? { user_id: currentUserId } : {}
     })
     
     uploadProgress.value = 100
     dataUploaded.value = true
     
+    const fileInfo = response.file_stored 
+      ? ` File stored: ${response.file_name || 'uploaded file'}`
+      : ''
+    
     toast.add({
       title: 'Upload successful!',
-      description: `Successfully uploaded data for ${response.results.users} users`,
+      description: `Successfully uploaded data for ${response.results.users} users.${fileInfo}`,
       color: 'green'
     })
   } catch (error: any) {

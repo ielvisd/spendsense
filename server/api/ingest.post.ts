@@ -90,9 +90,30 @@ export default defineEventHandler(async (event) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey)
     
+    // Ensure storage bucket exists (create if it doesn't)
+    const bucketName = 'data-uploads'
+    const { data: bucketExists } = await supabase.storage.getBucket(bucketName)
+    if (!bucketExists) {
+      // Create bucket if it doesn't exist
+      const { error: bucketError } = await supabase.storage.createBucket(bucketName, {
+        public: false, // Private bucket for user data
+        fileSizeLimit: 52428800, // 50MB max file size
+        allowedMimeTypes: ['application/json', 'text/csv', 'application/csv']
+      })
+      if (bucketError && !bucketError.message.includes('already exists')) {
+        console.warn('Could not create storage bucket:', bucketError.message)
+      }
+    }
+    
     // Check if this is a multipart form upload (CSV file)
     const contentType = getHeader(event, 'content-type') || ''
     let usersData: UserWithData[]
+    let storedFilePath: string | null = null
+    let fileName: string | null = null
+    
+    // Get user ID from query or body if available
+    const query = getQuery(event)
+    const userId = query.user_id as string || null
     
     if (contentType.includes('multipart/form-data')) {
       // Handle CSV file upload
@@ -106,12 +127,53 @@ export default defineEventHandler(async (event) => {
         })
       }
       
+      fileName = filePart.filename || `upload_${Date.now()}.csv`
+      
+      // Store file in Supabase Storage
+      const filePath = userId 
+        ? `users/${userId}/${Date.now()}_${fileName}`
+        : `uploads/${Date.now()}_${fileName}`
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from(bucketName)
+        .upload(filePath, filePart.data, {
+          contentType: filePart.type || 'text/csv',
+          upsert: false
+        })
+      
+      if (uploadError) {
+        console.warn('File storage failed:', uploadError.message)
+        // Continue with processing even if storage fails
+      } else {
+        storedFilePath = uploadData.path
+      }
+      
       // Parse CSV
       const csvText = Buffer.from(filePart.data).toString('utf-8')
       usersData = parseCSV(csvText)
     } else {
       // Handle JSON body
       const body = await readBody(event)
+      
+      // If JSON data is provided as a file, try to store it
+      if (body.file && body.file.data) {
+        fileName = body.file.name || `upload_${Date.now()}.json`
+        const filePath = userId 
+          ? `users/${userId}/${Date.now()}_${fileName}`
+          : `uploads/${Date.now()}_${fileName}`
+        
+        const fileBuffer = Buffer.from(body.file.data, 'base64')
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, fileBuffer, {
+            contentType: 'application/json',
+            upsert: false
+          })
+        
+        if (!uploadError) {
+          storedFilePath = uploadData.path
+        }
+      }
       
       if (body.data) {
         usersData = body.data
@@ -122,6 +184,24 @@ export default defineEventHandler(async (event) => {
           statusCode: 400,
           message: 'Invalid request format. Expected array of user data or { data: [...] }'
         })
+      }
+      
+      // Store JSON data as file if we have it
+      if (usersData && !storedFilePath && userId) {
+        fileName = `data_${Date.now()}.json`
+        const filePath = `users/${userId}/${fileName}`
+        const jsonBuffer = Buffer.from(JSON.stringify(usersData, null, 2))
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from(bucketName)
+          .upload(filePath, jsonBuffer, {
+            contentType: 'application/json',
+            upsert: false
+          })
+        
+        if (!uploadError) {
+          storedFilePath = uploadData.path
+        }
       }
     }
     
@@ -300,7 +380,10 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       message: `Ingested ${results.users} users`,
-      results
+      results,
+      file_stored: storedFilePath ? true : false,
+      file_path: storedFilePath,
+      file_name: fileName
     }
   } catch (error: any) {
     throw createError({
