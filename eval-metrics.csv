@@ -2,7 +2,7 @@ Metric,Value,Percentage,Target,Status
 Coverage,48/76,63.2%,100%,FAIL
 Explainability,146/146,100.0%,100%,PASS
 Auditability,146/146,100.0%,100%,PASS
-Latency Average,809.3ms,N/A,<1000ms,PASS
+Latency Average,809.7ms,N/A,<1000ms,PASS
 Latency P95,993.0ms,N/A,<2000ms,PASS
 Relevance Score,85,N/A,>80,PASS
 Fairness Score,83.3,N/A,>80,PASS

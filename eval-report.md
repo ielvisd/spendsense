@@ -1,6 +1,6 @@
 # SpendSense Evaluation Report
 
-Generated: 2025-11-08T04:19:09.783Z
+Generated: 2025-11-08T04:43:27.751Z
 
 ## Coverage Metrics
 
@@ -20,11 +20,11 @@ Generated: 2025-11-08T04:19:09.783Z
 
 ## Latency Metrics
 
-- Average: 809.3ms
+- Average: 809.7ms
 - Min: 630ms
 - Max: 1324ms
 - P95: 993ms
-- Total requests: 274
+- Total requests: 276
 
 ## Relevance Metrics
 

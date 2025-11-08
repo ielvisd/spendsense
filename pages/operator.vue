@@ -33,18 +33,22 @@
           <UFormField label="Filter by Persona" class="[&_label]:text-gray-900">
             <USelect
               v-model="filters.persona"
-              :options="personaOptions"
+              :items="personaOptions"
               placeholder="All Personas"
-              class="[&_select]:text-gray-900 [&_select]:bg-white [&_option]:text-gray-900"
+              value-key="value"
+              class="w-full [&_button]:text-gray-900 [&_button]:bg-white"
+              :ui="{ item: 'text-gray-900 bg-white hover:bg-gray-100' }"
             />
           </UFormField>
           
           <UFormField label="Filter by Signal Type" class="[&_label]:text-gray-900">
             <USelect
               v-model="filters.signalType"
-              :options="signalTypeOptions"
+              :items="signalTypeOptions"
               placeholder="All Signals"
-              class="[&_select]:text-gray-900 [&_select]:bg-white [&_option]:text-gray-900"
+              value-key="value"
+              class="w-full [&_button]:text-gray-900 [&_button]:bg-white"
+              :ui="{ item: 'text-gray-900 bg-white hover:bg-gray-100' }"
             />
           </UFormField>
           
@@ -145,113 +149,132 @@
                       </tr>
                     </thead>
                     <tbody class="bg-white">
-                      <tr v-for="userData in filteredUsers" :key="userData.user.id" class="border-b border-gray-200 hover:bg-gray-50">
-                        <td class="px-4 py-3 font-medium text-gray-900">{{ userData.user.fake_name }}</td>
-                        <td class="px-4 py-3 text-gray-900">
-                          <UBadge v-if="userData.persona?.persona_type" :color="getPersonaColor(userData.persona.persona_type)">
-                            {{ userData.persona.persona_type }}
-                          </UBadge>
-                          <span v-else class="text-gray-500">Not Assigned</span>
-                        </td>
-                        <td class="px-4 py-3 text-gray-900">{{ userData.signals_count }}</td>
-                        <td class="px-4 py-3 text-gray-900">{{ userData.recommendations_count }}</td>
-                        <td class="px-4 py-3">
-                          <UButton
-                            size="xs"
-                            variant="ghost"
-                            @click="toggleExpand(userData)"
-                          >
-                            {{ expandedRows.has(userData.user.id) ? 'Collapse' : 'Expand' }}
-                          </UButton>
-                        </td>
-                      </tr>
+                      <template v-for="userData in filteredUsers" :key="userData.user.id">
+                        <tr class="border-b border-gray-200 hover:bg-gray-50">
+                          <td class="px-4 py-3 font-medium text-gray-900">{{ userData.user.fake_name }}</td>
+                          <td class="px-4 py-3 text-gray-900">
+                            <UBadge v-if="userData.persona?.persona_type" :color="getPersonaColor(userData.persona.persona_type)">
+                              {{ userData.persona.persona_type }}
+                            </UBadge>
+                            <span v-else class="text-gray-500">Not Assigned</span>
+                          </td>
+                          <td class="px-4 py-3 text-gray-900">{{ userData.signals_count }}</td>
+                          <td class="px-4 py-3 text-gray-900">{{ userData.recommendations_count }}</td>
+                          <td class="px-4 py-3">
+                            <UButton
+                              size="xs"
+                              variant="ghost"
+                              @click="toggleExpand(userData)"
+                            >
+                              {{ expandedRows.has(userData.user.id) ? 'Collapse' : 'Expand' }}
+                            </UButton>
+                          </td>
+                        </tr>
+                        <!-- Expanded Row Content - directly under the user row -->
+                        <tr v-if="expandedRows.has(userData.user.id)">
+                          <td colspan="5" class="px-4 py-4 bg-gray-50">
+                            <UCard class="!bg-white">
+                              <div class="space-y-4">
+                                <!-- Signals -->
+                                <div>
+                                  <h3 class="font-semibold mb-2 text-gray-900">Signals</h3>
+                                  <div class="space-y-2">
+                                    <div
+                                      v-for="signal in userData.signals"
+                                      :key="signal.id"
+                                      class="p-3 bg-white rounded border-2 border-gray-300 shadow-sm"
+                                    >
+                                      <p class="font-semibold text-gray-900 mb-2">{{ signal.signal_type }}</p>
+                                      <pre class="text-xs text-gray-700 bg-gray-50 p-2 rounded border border-gray-200 overflow-x-auto">{{ JSON.stringify(signal.signal_data, null, 2) }}</pre>
+                                    </div>
+                                    <div v-if="userData.signals.length === 0" class="text-sm text-gray-500 italic">
+                                      No signals detected
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <!-- Persona Rationale -->
+                                <div v-if="userData.persona">
+                                  <h3 class="font-semibold mb-2 text-gray-900">Persona Rationale</h3>
+                                  <p class="text-gray-700">{{ userData.persona.rationale }}</p>
+                                </div>
+                                
+                                <!-- Recommendations -->
+                                <div>
+                                  <h3 class="font-semibold mb-2 text-gray-900">Recommendations</h3>
+                                  <div class="space-y-2">
+                                    <div
+                                      v-for="rec in userData.recommendations"
+                                      :key="rec.id"
+                                      class="p-2 rounded flex justify-between items-center bg-white"
+                                      :class="{
+                                        'ring-2 ring-[#457B9D]': selectedRecommendations.has(rec.id),
+                                        'border-2 border-red-400 bg-red-50': rec.is_flagged,
+                                        'border border-[#A8DADC]': !rec.is_flagged
+                                      }"
+                                    >
+                                      <div class="flex items-center gap-3 flex-1">
+                                        <UCheckbox
+                                          :model-value="selectedRecommendations.has(rec.id)"
+                                          @update:model-value="toggleRecommendationSelection(rec.id)"
+                                          :label="''"
+                                          :aria-label="`Select recommendation: ${rec.rationale.substring(0, 50)}`"
+                                        />
+                                        <div class="flex-1">
+                                          <div class="flex items-center gap-2 mb-1">
+                                            <p class="font-medium text-gray-900">{{ rec.rationale.substring(0, 100) }}...</p>
+                                            <UBadge v-if="rec.is_flagged" color="red" size="xs">
+                                              Flagged
+                                            </UBadge>
+                                          </div>
+                                          <p class="text-xs text-gray-500">{{ new Date(rec.created_at).toLocaleDateString() }}</p>
+                                          <div class="flex gap-2 mt-1">
+                                            <UBadge v-if="rec.approved_by_operator" color="green" size="xs">
+                                              Approved
+                                            </UBadge>
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div class="flex gap-2">
+                                        <UButton
+                                          size="xs"
+                                          color="primary"
+                                          @click="approveRecommendation(rec.id)"
+                                          :disabled="!!rec.approved_by_operator"
+                                          :aria-label="rec.approved_by_operator ? 'Recommendation already approved' : 'Approve this recommendation'"
+                                          :aria-disabled="!!rec.approved_by_operator"
+                                        >
+                                          Approve
+                                        </UButton>
+                                        <UButton
+                                          size="xs"
+                                          color="error"
+                                          variant="outline"
+                                          @click="flagRecommendation(rec.id)"
+                                          :disabled="rec.is_flagged"
+                                          :aria-label="rec.is_flagged ? 'Recommendation already flagged' : 'Flag this recommendation for review'"
+                                          :aria-disabled="rec.is_flagged"
+                                        >
+                                          {{ rec.is_flagged ? 'Flagged' : 'Flag' }}
+                                        </UButton>
+                                      </div>
+                                    </div>
+                                    <div v-if="userData.recommendations.length === 0" class="text-sm text-gray-500 italic">
+                                      No recommendations generated
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </UCard>
+                          </td>
+                        </tr>
+                      </template>
                     </tbody>
                   </table>
                 </div>
                 <div v-if="filteredUsers.length > 0" class="mt-2 text-sm text-gray-600 text-center">
                   Showing {{ filteredUsers.length }} user{{ filteredUsers.length !== 1 ? 's' : '' }}
                 </div>
-              </div>
-              
-              <!-- Expanded Row Content -->
-              <div v-for="user in filteredUsers" :key="user.user.id">
-                <UCard
-                  v-if="expandedRows.has(user.user.id)"
-                  class="mt-4"
-                >
-                  <div class="space-y-4">
-                    <!-- Signals -->
-                    <div>
-                      <h3 class="font-semibold mb-2 text-gray-900">Signals</h3>
-                      <div class="space-y-2">
-                        <div
-                          v-for="signal in user.signals"
-                          :key="signal.id"
-                          class="p-3 bg-white rounded border-2 border-gray-300 shadow-sm"
-                        >
-                          <p class="font-semibold text-gray-900 mb-2">{{ signal.signal_type }}</p>
-                          <pre class="text-xs text-gray-700 bg-gray-50 p-2 rounded border border-gray-200 overflow-x-auto">{{ JSON.stringify(signal.signal_data, null, 2) }}</pre>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <!-- Persona Rationale -->
-                    <div v-if="user.persona">
-                      <h3 class="font-semibold mb-2 text-[#1D3557]">Persona Rationale</h3>
-                      <p class="text-[#457B9D]">{{ user.persona.rationale }}</p>
-                    </div>
-                    
-                    <!-- Recommendations -->
-                    <div>
-                      <h3 class="font-semibold mb-2 text-[#1D3557]">Recommendations</h3>
-                      <div class="space-y-2">
-                        <div
-                          v-for="rec in user.recommendations"
-                          :key="rec.id"
-                          class="p-2 border border-[#A8DADC] rounded flex justify-between items-center bg-white"
-                          :class="{ 'ring-2 ring-[#457B9D]': selectedRecommendations.has(rec.id) }"
-                        >
-                          <div class="flex items-center gap-3 flex-1">
-                            <UCheckbox
-                              :model-value="selectedRecommendations.has(rec.id)"
-                              @update:model-value="toggleRecommendationSelection(rec.id)"
-                              :label="''"
-                              :aria-label="`Select recommendation: ${rec.rationale.substring(0, 50)}`"
-                            />
-                            <div class="flex-1">
-                              <p class="font-medium text-[#1D3557]">{{ rec.rationale.substring(0, 100) }}...</p>
-                              <p class="text-xs text-[#457B9D]/70">{{ new Date(rec.created_at).toLocaleDateString() }}</p>
-                              <UBadge v-if="rec.approved_by_operator" color="green" size="xs" class="mt-1">
-                                Approved
-                              </UBadge>
-                            </div>
-                          </div>
-                          <div class="flex gap-2">
-                            <UButton
-                              size="xs"
-                              color="primary"
-                              @click="approveRecommendation(rec.id)"
-                              :disabled="!!rec.approved_by_operator"
-                              :aria-label="rec.approved_by_operator ? 'Recommendation already approved' : 'Approve this recommendation'"
-                              :aria-disabled="!!rec.approved_by_operator"
-                            >
-                              Approve
-                            </UButton>
-                            <UButton
-                              size="xs"
-                              color="error"
-                              variant="outline"
-                              @click="flagRecommendation(rec.id)"
-                              aria-label="Flag this recommendation for review"
-                            >
-                              Flag
-                            </UButton>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </UCard>
               </div>
             </div>
           </UCard>
@@ -637,6 +660,18 @@ const loadUsers = async () => {
       return
     }
     
+    // Get all flagged recommendation IDs to mark them in the UI
+    const { data: flagLogs } = await supabase
+      .from('logs')
+      .select('decision_trace')
+      .eq('action_type', 'recommendation_flagged')
+    
+    const flaggedRecIds = new Set(
+      flagLogs
+        ?.map(log => (log.decision_trace as any)?.recommendation_id)
+        .filter(Boolean) || []
+    )
+    
     // For each user, get their signals, persona, and recommendations
     const usersWithData = await Promise.all(
       usersData.map(async (user) => {
@@ -647,11 +682,17 @@ const loadUsers = async () => {
             supabase.from('recommendations').select('*').eq('user_id', user.id)
           ])
           
+          // Mark flagged recommendations
+          const recommendationsWithFlags = (recommendations.data || []).map((rec: any) => ({
+            ...rec,
+            is_flagged: flaggedRecIds.has(rec.id)
+          }))
+          
           return {
             user,
             signals: signals.data || [],
             persona: persona.data || null,
-            recommendations: recommendations.data || [],
+            recommendations: recommendationsWithFlags,
             signals_count: signals.data?.length || 0,
             recommendations_count: recommendations.data?.length || 0
           }
@@ -769,8 +810,11 @@ const flagRecommendation = async (recId: string) => {
       color: 'orange'
     })
     
+    // Refresh current user view to show flagged state
+    await loadUsers()
+    
     // Refresh flag queue if on that tab
-    if (activeTab.value === 1) {
+    if (activeTab.value === 'flag-queue') {
       await loadFlagQueue()
     }
     selectedRecommendations.value.delete(recId)
@@ -835,11 +879,14 @@ const bulkFlag = async () => {
       color: 'orange'
     })
     
-    clearSelection()
+    // Refresh current user view to show flagged state
     await loadUsers()
-    if (activeTab.value === 1) {
+    
+    // Refresh flag queue if on that tab
+    if (activeTab.value === 'flag-queue') {
       await loadFlagQueue()
     }
+    clearSelection()
   } catch (error: any) {
     toast.add({
       title: 'Error',
@@ -868,14 +915,40 @@ const loadFlagQueue = async () => {
 }
 
 const removeFromFlagQueue = async (recId: string) => {
-  // In a real implementation, this would remove from flag queue
-  // For now, just refresh the queue
-  await loadFlagQueue()
-  toast.add({
-    title: 'Removed from flag queue',
-    description: 'The recommendation has been dismissed.',
-    color: 'green'
-  })
+  if (!currentOperatorId.value) {
+    toast.add({
+      title: 'Error',
+      description: 'Operator ID not found',
+      color: 'red'
+    })
+    return
+  }
+  
+  try {
+    await $fetch('/api/operator/unflag', {
+      method: 'POST',
+      body: {
+        recommendation_ids: [recId],
+        operator_id: currentOperatorId.value
+      }
+    })
+    
+    toast.add({
+      title: 'Removed from flag queue',
+      description: 'The recommendation has been dismissed.',
+      color: 'green'
+    })
+    
+    // Refresh flag queue and user view
+    await loadFlagQueue()
+    await loadUsers()
+  } catch (error: any) {
+    toast.add({
+      title: 'Error',
+      description: error.message || 'Failed to remove flag',
+      color: 'red'
+    })
+  }
 }
 
 const loadFairnessMetrics = async () => {
