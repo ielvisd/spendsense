@@ -264,6 +264,58 @@ export default defineEventHandler(async (event) => {
     console.log('[INGEST] Processing with userId:', userId, 'usersData length:', usersData?.length)
     if (userId) {
       console.log('[INGEST] Assigning single user data for authenticated user:', userId)
+      
+      // Delete old data for this user to avoid duplicates from previous uploads
+      console.log('[INGEST] Cleaning up old data for user:', userId)
+      
+      // First, get existing account IDs to delete related transactions
+      const { data: existingAccounts } = await supabase
+        .from('accounts')
+        .select('id')
+        .eq('user_id', userId)
+      
+      const existingAccountIds = existingAccounts?.map(a => a.id) || []
+      
+      if (existingAccountIds.length > 0) {
+        console.log('[INGEST] Found', existingAccountIds.length, 'existing accounts to clean up')
+        
+        // Delete transactions for these accounts
+        const { error: deleteTransactionsError } = await supabase
+          .from('transactions')
+          .delete()
+          .in('account_id', existingAccountIds)
+        
+        if (deleteTransactionsError) {
+          console.warn('[INGEST] Error deleting old transactions (non-critical):', deleteTransactionsError)
+        } else {
+          console.log('[INGEST] Deleted old transactions')
+        }
+      }
+      
+      // Delete accounts
+      const { error: deleteAccountsError } = await supabase
+        .from('accounts')
+        .delete()
+        .eq('user_id', userId)
+      
+      if (deleteAccountsError) {
+        console.warn('[INGEST] Error deleting old accounts (non-critical):', deleteAccountsError)
+      } else {
+        console.log('[INGEST] Deleted old accounts')
+      }
+      
+      // Delete liabilities
+      const { error: deleteLiabilitiesError } = await supabase
+        .from('liabilities')
+        .delete()
+        .eq('user_id', userId)
+      
+      if (deleteLiabilitiesError) {
+        console.warn('[INGEST] Error deleting old liabilities (non-critical):', deleteLiabilitiesError)
+      } else {
+        console.log('[INGEST] Deleted old liabilities')
+      }
+      
       // Select ONE user's data randomly from the synthetic file for realistic demo
       const selectedUser = usersData[Math.floor(Math.random() * usersData.length)]
       
@@ -416,10 +468,14 @@ export default defineEventHandler(async (event) => {
                   continue // Skip invalid dates
                 }
                 
+                // Database constraint requires amount > 0, so use absolute value
+                // (Original sign is preserved in merchant_name context for payroll vs expenses)
+                const absoluteAmount = Math.abs(txn.amount)
+                
                 transactionsToInsert.push({
                   account_id: dbAccountId,
                   date: txn.date,
-                  amount: txn.amount,
+                  amount: absoluteAmount,
                   merchant_name: txn.merchant_name || null,
                   payment_channel: txn.payment_channel || null,
                   personal_finance_category: txn.personal_finance_category || null,

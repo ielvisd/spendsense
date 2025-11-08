@@ -1,6 +1,6 @@
 # SpendSense Evaluation Report
 
-Generated: 2025-11-07T20:47:20.211Z
+Generated: 2025-11-08T02:05:24.401Z
 
 ## Coverage Metrics
 
@@ -10,21 +10,21 @@ Generated: 2025-11-07T20:47:20.211Z
 
 ## Explainability Metrics
 
-- Recommendations with rationales: 0 / 0 (0.0%)
-- **Target: 100%** - ❌ FAIL
+- Recommendations with rationales: 808 / 808 (100.0%)
+- **Target: 100%** - ✅ PASS
 
 ## Auditability Metrics
 
-- Recommendations with decision traces: 0 / 0 (0.0%)
-- **Target: 100%** - ❌ FAIL
+- Recommendations with decision traces: 808 / 808 (100.0%)
+- **Target: 100%** - ✅ PASS
 
 ## Latency Metrics
 
-- Average: 0.0ms
-- Min: 0ms
-- Max: 0ms
-- P95: 0ms
-- Total requests: 0
+- Average: 806.8ms
+- Min: 647ms
+- Max: 1314ms
+- P95: 993ms
+- Total requests: 202
 
 ## Relevance Metrics
 
@@ -43,12 +43,12 @@ Generated: 2025-11-07T20:47:20.211Z
 
 #### By Age
 
-**55+:**
+**18-34:**
 - high_utilization: 1 (100.0%)
 
 #### By Gender
 
-**M:**
+**F:**
 - high_utilization: 1 (100.0%)
 
 #### By Income
@@ -58,7 +58,7 @@ Generated: 2025-11-07T20:47:20.211Z
 
 #### By Ethnicity
 
-**Asian:**
+**Black:**
 - high_utilization: 1 (100.0%)
 
 ### Potential Bias Flags

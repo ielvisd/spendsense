@@ -23,7 +23,7 @@
           </div>
           
           <div v-if="consentStatus" class="flex items-center gap-4">
-            <UBadge color="green">Consent Active</UBadge>
+            <UBadge color="green" class="!text-white">Consent Active</UBadge>
             <UButton
               color="red"
               variant="outline"
@@ -31,12 +31,13 @@
               :loading="revoking"
               :aria-busy="revoking"
               aria-label="Revoke consent to data processing"
+              class="!text-red-600 !border-red-600 !bg-white hover:!bg-red-600 hover:!text-white"
             >
               Revoke Consent
             </UButton>
           </div>
           <div v-else class="flex items-center gap-4">
-            <UBadge color="gray">No Active Consent</UBadge>
+            <UBadge color="gray" class="!text-white">No Active Consent</UBadge>
             <UButton
               color="primary"
               @click="grantConsent"
@@ -51,7 +52,7 @@
       </UCard>
       
       <!-- Account Information -->
-      <UCard class="!bg-white shadow-lg">
+      <UCard class="mb-6 !bg-white shadow-lg">
         <template #header>
           <div class="border-b border-[#A8DADC] pb-3">
             <h2 class="text-xl font-bold text-[#1D3557]">Account Information</h2>
@@ -75,6 +76,7 @@
               :aria-busy="loggingOut"
               aria-label="Sign out of your account"
               block
+              class="!text-red-600 !border-red-600 !bg-white hover:!bg-red-600 hover:!text-white"
             >
               Sign Out
             </UButton>
@@ -107,6 +109,7 @@
                 variant="outline" 
                 @click="showRevokeDialog = false"
                 aria-label="Cancel revoking consent"
+                class="!text-[#1D3557] !border-[#1D3557] !bg-white hover:!bg-[#1D3557] hover:!text-white"
               >
                 Cancel
               </UButton>
@@ -116,6 +119,7 @@
                 :loading="revoking"
                 :aria-busy="revoking"
                 aria-label="Confirm revoke consent and delete data"
+                class="!text-white !bg-red-600 hover:!bg-red-700"
               >
                 Revoke Consent
               </UButton>

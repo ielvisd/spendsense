@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
   try {
     const query = getQuery(event)
     const userId = query.user_id as string
-    const limit = parseInt(query.limit as string) || 30
+    const limit = query.limit ? parseInt(query.limit as string) : undefined // No default limit - let pagination handle it
     const days = parseInt(query.days as string) || 90
     
     if (!userId) {
@@ -46,13 +46,19 @@ export default defineEventHandler(async (event) => {
     console.log('[TRANSACTIONS] Querying transactions from', startDate.toISOString().split('T')[0], 'to today')
     
     // Get transactions for these accounts
-    const { data: transactions, error: transactionsError } = await supabase
+    let transactionsQuery = supabase
       .from('transactions')
       .select('*')
       .in('account_id', accountIds)
       .gte('date', startDate.toISOString().split('T')[0])
       .order('date', { ascending: false })
-      .limit(limit)
+    
+    // Only apply limit if specified
+    if (limit) {
+      transactionsQuery = transactionsQuery.limit(limit)
+    }
+    
+    const { data: transactions, error: transactionsError } = await transactionsQuery
     
     if (transactionsError) {
       console.error('[TRANSACTIONS] Error fetching transactions:', transactionsError)

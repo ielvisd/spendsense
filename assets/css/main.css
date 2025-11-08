@@ -195,3 +195,28 @@ button:disabled,
 .animation-delay-4000 {
   animation-delay: 4s;
 }
+
+/* Ensure table headers have dark text for readability */
+table thead th,
+[role="columnheader"],
+thead th {
+  color: #1D3557 !important;
+  font-weight: 600 !important;
+}
+
+/* Ensure Nuxt UI table headers have dark text */
+[data-headlessui-state] thead th,
+.rt-TableHeaderCell {
+  color: #1D3557 !important;
+  font-weight: 600 !important;
+}
+
+/* Ensure accordion content has proper contrast and readability */
+[data-headlessui-state] [role="region"] p,
+[data-headlessui-state] [role="region"] div,
+[data-headlessui-state] [role="region"] span,
+.accordion-content,
+[data-headlessui-state="open"] [role="region"] * {
+  color: #1D3557 !important;
+  font-weight: 400 !important;
+}

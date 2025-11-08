@@ -30,7 +30,13 @@ export default defineEventHandler(async (event) => {
     }
     
     const supabaseUrl = process.env.SUPABASE_URL || 'https://uiheuojorgugxboadzas.supabase.co'
-    const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpaGV1b2pvcmd1Z3hib2FkemFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0Nzc4MjQsImV4cCI6MjA3ODA1MzgyNH0.s4NOKH-9t2CfgNhhzNITwHqNNx4nf-FYVDEItYy4YcI'
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpaGV1b2pvcmd1Z3hib2FkemFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0Nzc4MjQsImV4cCI6MjA3ODA1MzgyNH0.s4NOKH-9t2CfgNhhzNITwHqNNx4nf-FYVDEItYy4YcI'
+    
+    // Use service role key for server-side operations (bypasses RLS)
+    const config = useRuntimeConfig()
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || config.supabaseServiceRoleKey
+    const supabaseKey = serviceRoleKey || supabaseAnonKey
+    
     const supabase = createClient(supabaseUrl, supabaseKey)
     
     // Guardrail 1: Consent enforcement - block processing without opt-in
@@ -94,7 +100,7 @@ export default defineEventHandler(async (event) => {
     
     // Store recommendations
     for (const rec of filteredRecommendations) {
-      await supabase
+      const { error: recError } = await supabase
         .from('recommendations')
         .insert({
           user_id: userId,
@@ -102,22 +108,35 @@ export default defineEventHandler(async (event) => {
           offer_data: rec.offer_data || null,
           rationale: rec.rationale
         })
+      
+      if (recError) {
+        console.error('[RECOMMENDATIONS] Error inserting recommendation:', recError)
+        // Continue with other recommendations even if one fails
+      }
     }
     
     // Calculate latency
     const latency = Date.now() - startTime
     
-    // Log latency for evaluation metrics
-    await supabase
-      .from('logs')
-      .insert({
-        user_id: userId,
-        action_type: 'recommendation_generation',
-        decision_trace: {
-          latency_ms: latency,
-          recommendation_count: filteredRecommendations.length
-        }
-      })
+    // Log latency for evaluation metrics (non-blocking - don't fail if this errors)
+    try {
+      const { error: logError } = await supabase
+        .from('logs')
+        .insert({
+          user_id: userId,
+          action_type: 'recommendation_generation',
+          decision_trace: {
+            latency_ms: latency,
+            recommendation_count: filteredRecommendations.length
+          }
+        })
+      
+      if (logError) {
+        console.warn('[RECOMMENDATIONS] Error logging latency (non-critical):', logError)
+      }
+    } catch (logErr) {
+      console.warn('[RECOMMENDATIONS] Error logging latency (non-critical):', logErr)
+    }
     
     return {
       education_items: filteredRecommendations.filter(r => r.type === 'education').slice(0, 5),
@@ -125,6 +144,8 @@ export default defineEventHandler(async (event) => {
       latency_ms: latency
     }
   } catch (error: any) {
+    console.error('[RECOMMENDATIONS] Error:', error)
+    console.error('[RECOMMENDATIONS] Error stack:', error.stack)
     throw createError({
       statusCode: error.statusCode || 500,
       message: `Recommendation generation failed: ${error.message}`
@@ -137,17 +158,30 @@ function generateRecommendations(
   signals: any[],
   accounts: any[],
   content: any[]
-): Array<{ type: string; content_id?: string; offer_data?: any; rationale: string }> {
-  const recommendations: Array<{ type: string; content_id?: string; offer_data?: any; rationale: string }> = []
+): Array<{ type: string; content_id?: string; title?: string; offer_data?: any; rationale: string; disclaimer?: string }> {
+  const recommendations: Array<{ type: string; content_id?: string; title?: string; offer_data?: any; rationale: string; disclaimer?: string }> = []
   
   // Generate education items from content
   const educationContent = content.filter(c => c.type === 'education')
-  for (const item of educationContent.slice(0, 5)) {
-    const rationale = generateRationale(persona, signals, item)
+  if (educationContent.length > 0) {
+    for (const item of educationContent.slice(0, 5)) {
+      const rationale = generateRationale(persona, signals, item)
+      const contentText = item.content_text || 'Financial education content'
+      recommendations.push({
+        type: 'education',
+        content_id: item.id,
+        title: item.title,
+        rationale: `${rationale} ${contentText}`,
+        disclaimer: 'This is educational content, not financial advice. Consult a licensed advisor.'
+      })
+    }
+  } else {
+    // Fallback if no content available - create generic education items
+    const rationale = generateRationale(persona, signals, null)
     recommendations.push({
       type: 'education',
-      content_id: item.id,
-      rationale: `${rationale} ${item.content_text.substring(0, 200)}...`
+      rationale: `${rationale} Learn about managing ${persona.persona_type.replace('_', ' ')} to improve your financial wellness.`,
+      disclaimer: 'This is educational content, not financial advice. Consult a licensed advisor.'
     })
   }
   
@@ -159,19 +193,36 @@ function generateRecommendations(
 }
 
 function generateRationale(persona: any, signals: any[], content: any): string {
-  const signalData = signals.find(s => s.signal_type === persona.persona_type.replace('_', '_')) || signals[0]
+  let dataCite = 'Based on your financial profile'
   
-  let dataCite = ''
-  if (signalData) {
+  if (signals && signals.length > 0) {
     switch (persona.persona_type) {
       case 'high_utilization':
-        dataCite = `Your credit utilization is ${signalData.signal_data?.utilization_percentage?.toFixed(1)}%`
+        {
+          const highUtilSignal = signals.find(s => s.signal_type === 'credit_high_utilization')
+          if (highUtilSignal?.signal_data) {
+            const util = highUtilSignal.signal_data.max_utilization_percentage || highUtilSignal.signal_data.utilization_percentage
+            if (util) {
+              dataCite = `Your credit utilization is ${util.toFixed(1)}%`
+            }
+          }
+        }
         break
       case 'subscription_heavy':
-        dataCite = `You have ${signalData.signal_data?.count} recurring subscriptions totaling $${signalData.signal_data?.total_monthly_spend?.toFixed(2)}/month`
+        {
+          const subSignal = signals.find(s => s.signal_type === 'subscriptions')
+          if (subSignal?.signal_data) {
+            dataCite = `You have ${subSignal.signal_data.count || 0} recurring subscriptions totaling $${(subSignal.signal_data.total_monthly_spend || 0).toFixed(2)}/month`
+          }
+        }
         break
       case 'variable_income_budgeter':
-        dataCite = `Your income varies by ${signalData.signal_data?.variability_percentage?.toFixed(1)}%`
+        {
+          const incomeSignal = signals.find(s => s.signal_type === 'income_variability')
+          if (incomeSignal?.signal_data) {
+            dataCite = `Your income varies by ${(incomeSignal.signal_data.variability_percentage || 0).toFixed(1)}%`
+          }
+        }
         break
       default:
         dataCite = 'Based on your financial profile'
@@ -181,17 +232,17 @@ function generateRationale(persona: any, signals: any[], content: any): string {
   return `We noticed ${dataCite}. `
 }
 
-function generateOffers(persona: any, signals: any[], accounts: any[]): Array<{ type: string; offer_data: any; rationale: string }> {
-  const offers: Array<{ type: string; offer_data: any; rationale: string }> = []
+function generateOffers(persona: any, signals: any[], accounts: any[]): Array<{ type: string; offer_data: any; rationale: string; disclaimer?: string }> {
+  const offers: Array<{ type: string; offer_data: any; rationale: string; disclaimer?: string }> = []
   
   switch (persona.persona_type) {
     case 'high_utilization':
       {
         const highUtilSignal = signals.find(s => s.signal_type === 'credit_high_utilization')
-        if (highUtilSignal) {
-          const utilization = highUtilSignal.signal_data.utilization_percentage
-          const currentBalance = highUtilSignal.signal_data.current_balance
-          const estimatedInterest = currentBalance * 0.20 / 12 // Rough estimate
+        if (highUtilSignal?.signal_data) {
+          const utilization = highUtilSignal.signal_data.max_utilization_percentage || highUtilSignal.signal_data.average_utilization_percentage || highUtilSignal.signal_data.utilization_percentage || 0
+          const totalBalance = highUtilSignal.signal_data.total_balance || highUtilSignal.signal_data.current_balance || 0
+          const estimatedInterest = totalBalance * 0.20 / 12 // Rough estimate
           
           offers.push({
             type: 'offer',
@@ -200,7 +251,7 @@ function generateOffers(persona: any, signals: any[], accounts: any[]): Array<{ 
               provider: 'Chase Slate',
               description: 'Balance transfer credit card with 0% APR for 18 months'
             },
-            rationale: `Your Visa at ${utilization.toFixed(1)}% utilization ($${(currentBalance / 1000).toFixed(1)}k) could save $${estimatedInterest.toFixed(0)}/month in interest with a balance transfer.`
+            rationale: `Your credit cards at ${utilization.toFixed(1)}% utilization ($${(totalBalance / 1000).toFixed(1)}k) could save $${estimatedInterest.toFixed(0)}/month in interest with a balance transfer.`
           })
         }
       }
@@ -245,9 +296,9 @@ function generateOffers(persona: any, signals: any[], accounts: any[]): Array<{ 
 }
 
 function applyGuardrails(
-  recommendations: Array<{ type: string; content_id?: string; offer_data?: any; rationale: string }>,
+  recommendations: Array<{ type: string; content_id?: string; title?: string; offer_data?: any; rationale: string; disclaimer?: string }>,
   accounts: any[]
-): Array<{ type: string; content_id?: string; offer_data?: any; rationale: string }> {
+): Array<{ type: string; content_id?: string; title?: string; offer_data?: any; rationale: string; disclaimer?: string }> {
   // Eligibility check: Skip HYSA if user already has savings account
   const hasSavingsAccount = accounts.some(acc => acc.subtype === 'savings')
   
@@ -261,6 +312,12 @@ function applyGuardrails(
   // Tone guardrail: Validate and sanitize all rationales
   filtered = filtered.map(rec => {
     let rationale = rec.rationale
+    
+    // Remove disclaimer from rationale if it was appended (for backward compatibility)
+    const disclaimerText = 'This is educational content, not financial advice. Consult a licensed advisor.'
+    if (rationale.includes(disclaimerText)) {
+      rationale = rationale.replace(disclaimerText, '').trim()
+    }
     
     // Use comprehensive tone validation
     const toneResult = validateTone(rationale)
@@ -277,14 +334,13 @@ function applyGuardrails(
       })
     }
     
-    // Add disclaimer to all recommendations (if not already present)
-    if (!rationale.includes('This is educational content')) {
-      rationale += ' This is educational content, not financial advice. Consult a licensed advisor.'
-    }
+    // Ensure disclaimer is set for education items (separate from rationale)
+    const disclaimer = rec.disclaimer || (rec.type === 'education' ? disclaimerText : undefined)
     
     return {
       ...rec,
-      rationale
+      rationale,
+      disclaimer
     }
   })
   
