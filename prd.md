@@ -226,7 +226,7 @@ Run once for eval dataset; regenerate with new seed for variety.
 
 ## Stack
 
-  * **Frontend:** Nuxt 4 (Vue 3, TypeScript) – Pages for dashboard, operator, onboarding; Composables for signals/personas.
+  * **Frontend:** Nuxt 4 (Vue 3, TypeScript) – Pages for dashboard, operator, onboarding; Composables for signals/personas. Nuxt UI for components. 
   * **Backend:** Supabase – Postgres for storage, Auth for users/consent, Storage for CSVs, Edge Functions for heavy compute (e.g., signal detection if SQL limits hit).
   * **Data Gen:** Faker.js in Nuxt utility.
   * **Other:** `date-fns` (dates), `lodash` (utils); Vitest for ≥10 tests. No external deps beyond npm installs.

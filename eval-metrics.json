@@ -1,26 +1,26 @@
 {
   "coverage": {
-    "users_with_persona": 1,
-    "users_with_3plus_behaviors": 1,
-    "total_users": 1,
-    "percentage": 100
+    "users_with_persona": 48,
+    "users_with_3plus_behaviors": 24,
+    "total_users": 76,
+    "percentage": 63.1578947368421
   },
   "explainability": {
-    "recommendations_with_rationales": 808,
-    "total_recommendations": 808,
+    "recommendations_with_rationales": 146,
+    "total_recommendations": 146,
     "percentage": 100
   },
   "auditability": {
-    "recommendations_with_traces": 808,
-    "total_recommendations": 808,
+    "recommendations_with_traces": 146,
+    "total_recommendations": 146,
     "percentage": 100
   },
   "latency": {
-    "average_ms": 806.8465346534654,
-    "min_ms": 647,
-    "max_ms": 1314,
+    "average_ms": 809.2956204379562,
+    "min_ms": 630,
+    "max_ms": 1324,
     "p95_ms": 993,
-    "total_requests": 202
+    "total_requests": 274
   },
   "relevance": {
     "score": 85,
@@ -28,21 +28,83 @@
   },
   "fairness": {
     "persona_distribution": {
-      "high_utilization": 1
+      "high_utilization": 34,
+      "savings_builder": 11,
+      "variable_income_budgeter": 3
     },
     "demographic_breakdown": {
       "by_age": {
-        "18-34": {
+        "55+": {
           "high_utilization": {
+            "count": 13,
+            "percentage": 81.25
+          },
+          "savings_builder": {
+            "count": 2,
+            "percentage": 12.5
+          },
+          "variable_income_budgeter": {
             "count": 1,
-            "percentage": 100
+            "percentage": 6.25
+          }
+        },
+        "18-34": {
+          "variable_income_budgeter": {
+            "count": 1,
+            "percentage": 5.263157894736842
+          },
+          "high_utilization": {
+            "count": 14,
+            "percentage": 73.68421052631578
+          },
+          "savings_builder": {
+            "count": 4,
+            "percentage": 21.052631578947366
+          }
+        },
+        "35-54": {
+          "high_utilization": {
+            "count": 7,
+            "percentage": 53.84615384615385
+          },
+          "savings_builder": {
+            "count": 5,
+            "percentage": 38.46153846153847
+          },
+          "variable_income_budgeter": {
+            "count": 1,
+            "percentage": 7.6923076923076925
           }
         }
       },
       "by_gender": {
-        "F": {
+        "M": {
           "high_utilization": {
-            "count": 1,
+            "count": 14,
+            "percentage": 66.66666666666666
+          },
+          "variable_income_budgeter": {
+            "count": 3,
+            "percentage": 14.285714285714285
+          },
+          "savings_builder": {
+            "count": 4,
+            "percentage": 19.047619047619047
+          }
+        },
+        "F": {
+          "savings_builder": {
+            "count": 7,
+            "percentage": 28.000000000000004
+          },
+          "high_utilization": {
+            "count": 18,
+            "percentage": 72
+          }
+        },
+        "Non-binary": {
+          "high_utilization": {
+            "count": 2,
             "percentage": 100
           }
         }
@@ -50,21 +112,122 @@
       "by_income": {
         "high": {
           "high_utilization": {
+            "count": 16,
+            "percentage": 69.56521739130434
+          },
+          "savings_builder": {
+            "count": 5,
+            "percentage": 21.73913043478261
+          },
+          "variable_income_budgeter": {
+            "count": 2,
+            "percentage": 8.695652173913043
+          }
+        },
+        "middle": {
+          "variable_income_budgeter": {
             "count": 1,
-            "percentage": 100
+            "percentage": 5.263157894736842
+          },
+          "high_utilization": {
+            "count": 14,
+            "percentage": 73.68421052631578
+          },
+          "savings_builder": {
+            "count": 4,
+            "percentage": 21.052631578947366
+          }
+        },
+        "low": {
+          "savings_builder": {
+            "count": 2,
+            "percentage": 33.33333333333333
+          },
+          "high_utilization": {
+            "count": 4,
+            "percentage": 66.66666666666666
           }
         }
       },
       "by_ethnicity": {
+        "Asian": {
+          "high_utilization": {
+            "count": 4,
+            "percentage": 57.14285714285714
+          },
+          "variable_income_budgeter": {
+            "count": 1,
+            "percentage": 14.285714285714285
+          },
+          "savings_builder": {
+            "count": 2,
+            "percentage": 28.57142857142857
+          }
+        },
+        "White": {
+          "high_utilization": {
+            "count": 18,
+            "percentage": 75
+          },
+          "savings_builder": {
+            "count": 5,
+            "percentage": 20.833333333333336
+          },
+          "variable_income_budgeter": {
+            "count": 1,
+            "percentage": 4.166666666666666
+          }
+        },
         "Black": {
           "high_utilization": {
+            "count": 3,
+            "percentage": 60
+          },
+          "savings_builder": {
+            "count": 2,
+            "percentage": 40
+          }
+        },
+        "Other": {
+          "high_utilization": {
+            "count": 2,
+            "percentage": 66.66666666666666
+          },
+          "variable_income_budgeter": {
             "count": 1,
-            "percentage": 100
+            "percentage": 33.33333333333333
+          }
+        },
+        "Hispanic": {
+          "high_utilization": {
+            "count": 7,
+            "percentage": 77.77777777777779
+          },
+          "savings_builder": {
+            "count": 2,
+            "percentage": 22.22222222222222
           }
         }
       }
     },
-    "bias_flags": [],
-    "fairness_score": 100
+    "bias_flags": [
+      {
+        "persona_type": "high_utilization",
+        "demographic_dimension": "gender",
+        "demographic_value": "Non-binary",
+        "percentage": 100,
+        "expected_percentage": 70.83333333333334,
+        "difference": 29.166666666666657
+      },
+      {
+        "persona_type": "variable_income_budgeter",
+        "demographic_dimension": "ethnicity",
+        "demographic_value": "Other",
+        "percentage": 33.33333333333333,
+        "expected_percentage": 6.25,
+        "difference": 27.08333333333333
+      }
+    ],
+    "fairness_score": 83.33333333333334
   }
 }

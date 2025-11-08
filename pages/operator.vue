@@ -3,197 +3,258 @@
     <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <h1 class="text-2xl sm:text-3xl font-bold text-[#1D3557]">Operator Dashboard</h1>
-        <UButton 
-          @click="refreshData" 
-          :loading="loading" 
-          :aria-busy="loading"
-          color="primary"
-          aria-label="Refresh user data"
-          class="w-full sm:w-auto"
-        >
-          Refresh
-        </UButton>
+        <div class="flex gap-2 w-full sm:w-auto">
+          <UButton 
+            @click="processAllUsers" 
+            :loading="processingAllUsers" 
+            :aria-busy="processingAllUsers"
+            color="secondary"
+            aria-label="Process all users (signals, personas, recommendations)"
+            class="flex-1 sm:flex-none"
+          >
+            Process All Users
+          </UButton>
+          <UButton 
+            @click="refreshData" 
+            :loading="loading" 
+            :aria-busy="loading"
+            color="primary"
+            aria-label="Refresh user data"
+            class="flex-1 sm:flex-none"
+          >
+            Refresh
+          </UButton>
+        </div>
       </div>
       
       <!-- Filters -->
-      <UCard class="mb-6">
+      <UCard class="mb-6 bg-white">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <UFormGroup label="Filter by Persona">
+          <UFormField label="Filter by Persona" class="[&_label]:text-gray-900">
             <USelect
               v-model="filters.persona"
               :options="personaOptions"
               placeholder="All Personas"
-              @change="applyFilters"
+              class="[&_select]:text-gray-900 [&_select]:bg-white [&_option]:text-gray-900"
             />
-          </UFormGroup>
+          </UFormField>
           
-          <UFormGroup label="Filter by Signal Type">
+          <UFormField label="Filter by Signal Type" class="[&_label]:text-gray-900">
             <USelect
               v-model="filters.signalType"
               :options="signalTypeOptions"
               placeholder="All Signals"
-              @change="applyFilters"
+              class="[&_select]:text-gray-900 [&_select]:bg-white [&_option]:text-gray-900"
             />
-          </UFormGroup>
+          </UFormField>
           
-          <UFormGroup label="Search Users">
+          <UFormField label="Search Users" class="[&_label]:text-gray-900">
             <UInput
               v-model="filters.search"
               placeholder="Search by name..."
               @input="applyFilters"
+              class="[&_input]:text-gray-900 [&_input]:bg-white"
             />
-          </UFormGroup>
+          </UFormField>
         </div>
       </UCard>
       
       <!-- Tabs for Users and Flag Queue -->
-      <UTabs :items="tabs" v-model="activeTab" class="mb-6">
+      <UTabs :items="tabs" v-model="activeTab" :content="true" class="mb-6">
         <template #users>
           <!-- Users Table -->
           <UCard>
-            <!-- Bulk Actions Bar -->
-            <div v-if="selectedRecommendations.size > 0" class="mb-4 p-4 bg-[#A8DADC] rounded-lg flex justify-between items-center">
-              <span class="text-[#1D3557] font-medium">
-                {{ selectedRecommendations.size }} recommendation(s) selected
-              </span>
-              <div class="flex gap-2">
-                <UButton
-                  size="sm"
-                  color="primary"
-                  @click="bulkApprove"
-                  :loading="bulkProcessing"
-                  :aria-busy="bulkProcessing"
-                  :aria-label="`Approve ${selectedRecommendations.size} selected recommendations`"
-                >
-                  Bulk Approve
-                </UButton>
-                <UButton
-                  size="sm"
-                  color="error"
-                  variant="outline"
-                  @click="bulkFlag"
-                  :loading="bulkProcessing"
-                  :aria-busy="bulkProcessing"
-                  :aria-label="`Flag ${selectedRecommendations.size} selected recommendations`"
-                >
-                  Bulk Flag
-                </UButton>
-                <UButton
-                  size="sm"
-                  variant="ghost"
-                  @click="clearSelection"
-                  aria-label="Clear selected recommendations"
-                >
-                  Clear Selection
-                </UButton>
-              </div>
+            <!-- Loading State -->
+            <div v-if="loading" class="text-center py-8 text-[#457B9D]">
+              <p>Loading users...</p>
             </div>
             
-            <div class="overflow-x-auto">
-              <UTable
-                :rows="filteredUsers"
-                :columns="columns"
-                class="w-full min-w-[640px]"
-              >
-          <template #persona-data="{ row }">
-            <UBadge :color="getPersonaColor(row.persona?.persona_type)">
-              {{ row.persona?.persona_type || 'Not Assigned' }}
-            </UBadge>
-          </template>
-          
-          <template #actions-data="{ row }">
-            <UButton
-              size="xs"
-              variant="ghost"
-              @click="toggleExpand(row)"
+            <!-- Error State -->
+            <UAlert
+              v-else-if="loadError"
+              color="red"
+              variant="soft"
+              class="mb-4"
             >
-              {{ expandedRows.has(row.user.id) ? 'Collapse' : 'Expand' }}
-            </UButton>
-          </template>
-        </UTable>
-            </div>
-        
-        <!-- Expanded Row Content -->
-        <div v-for="user in filteredUsers" :key="user.user.id">
-          <UCard
-            v-if="expandedRows.has(user.user.id)"
-            class="mt-4"
-          >
-            <div class="space-y-4">
-              <!-- Signals -->
-              <div>
-                <h3 class="font-semibold mb-2">Signals</h3>
-                <div class="space-y-2">
-                  <div
-                    v-for="signal in user.signals"
-                    :key="signal.id"
-                    class="p-2 bg-[#A8DADC]/30 rounded border border-[#A8DADC]"
+              <template #title>Error Loading Users</template>
+              <template #description>
+                {{ loadError }}
+                <div class="mt-2 text-sm">
+                  This might be due to Row Level Security (RLS) policies. Operators need special permissions to view all users.
+                </div>
+              </template>
+            </UAlert>
+            
+            <!-- Content when data is loaded -->
+            <div v-else>
+              <!-- Bulk Actions Bar -->
+              <div v-if="selectedRecommendations.size > 0" class="mb-4 p-4 bg-[#A8DADC] rounded-lg flex justify-between items-center">
+                <span class="text-[#1D3557] font-medium">
+                  {{ selectedRecommendations.size }} recommendation(s) selected
+                </span>
+                <div class="flex gap-2">
+                  <UButton
+                    size="sm"
+                    color="primary"
+                    @click="bulkApprove"
+                    :loading="bulkProcessing"
+                    :aria-busy="bulkProcessing"
+                    :aria-label="`Approve ${selectedRecommendations.size} selected recommendations`"
                   >
-                    <p class="font-medium text-[#1D3557]">{{ signal.signal_type }}</p>
-                    <pre class="text-xs text-[#457B9D] mt-1">{{ JSON.stringify(signal.signal_data, null, 2) }}</pre>
-                  </div>
+                    Bulk Approve
+                  </UButton>
+                  <UButton
+                    size="sm"
+                    color="error"
+                    variant="outline"
+                    @click="bulkFlag"
+                    :loading="bulkProcessing"
+                    :aria-busy="bulkProcessing"
+                    :aria-label="`Flag ${selectedRecommendations.size} selected recommendations`"
+                  >
+                    Bulk Flag
+                  </UButton>
+                  <UButton
+                    size="sm"
+                    variant="ghost"
+                    @click="clearSelection"
+                    aria-label="Clear selected recommendations"
+                  >
+                    Clear Selection
+                  </UButton>
                 </div>
               </div>
               
-              <!-- Persona Rationale -->
-              <div v-if="user.persona">
-                <h3 class="font-semibold mb-2 text-[#1D3557]">Persona Rationale</h3>
-                <p class="text-[#457B9D]">{{ user.persona.rationale }}</p>
+              <!-- Empty State -->
+              <div v-if="filteredUsers.length === 0" class="text-center py-8 text-[#457B9D]">
+                <p class="text-lg font-medium mb-2">No users found</p>
+                <p class="text-sm">Users will appear here after they upload data and complete onboarding.</p>
               </div>
               
-              <!-- Recommendations -->
-              <div>
-                <h3 class="font-semibold mb-2 text-[#1D3557]">Recommendations</h3>
-                <div class="space-y-2">
-                  <div
-                    v-for="rec in user.recommendations"
-                    :key="rec.id"
-                    class="p-2 border border-[#A8DADC] rounded flex justify-between items-center bg-white"
-                    :class="{ 'ring-2 ring-[#457B9D]': selectedRecommendations.has(rec.id) }"
-                  >
-                    <div class="flex items-center gap-3 flex-1">
-                      <UCheckbox
-                        :model-value="selectedRecommendations.has(rec.id)"
-                        @update:model-value="toggleRecommendationSelection(rec.id)"
-                        :label="''"
-                        :aria-label="`Select recommendation: ${rec.rationale.substring(0, 50)}`"
-                      />
-                      <div class="flex-1">
-                        <p class="font-medium text-[#1D3557]">{{ rec.rationale.substring(0, 100) }}...</p>
-                        <p class="text-xs text-[#457B9D]/70">{{ new Date(rec.created_at).toLocaleDateString() }}</p>
-                        <UBadge v-if="rec.approved_by_operator" color="green" size="xs" class="mt-1">
-                          Approved
-                        </UBadge>
+              <!-- Users Table -->
+              <div v-if="filteredUsers.length > 0" class="mt-4">
+                <div class="overflow-x-auto bg-white rounded-lg border border-gray-200 shadow">
+                  <table class="w-full min-w-[640px]">
+                    <thead>
+                      <tr class="bg-[#1D3557]">
+                        <th class="px-4 py-3 text-left text-white font-semibold" style="color: white !important; background-color: #1D3557 !important;">Name</th>
+                        <th class="px-4 py-3 text-left text-white font-semibold" style="color: white !important; background-color: #1D3557 !important;">Persona</th>
+                        <th class="px-4 py-3 text-left text-white font-semibold" style="color: white !important; background-color: #1D3557 !important;">Signals</th>
+                        <th class="px-4 py-3 text-left text-white font-semibold" style="color: white !important; background-color: #1D3557 !important;">Recommendations</th>
+                        <th class="px-4 py-3 text-left text-white font-semibold" style="color: white !important; background-color: #1D3557 !important;">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody class="bg-white">
+                      <tr v-for="userData in filteredUsers" :key="userData.user.id" class="border-b border-gray-200 hover:bg-gray-50">
+                        <td class="px-4 py-3 font-medium text-gray-900">{{ userData.user.fake_name }}</td>
+                        <td class="px-4 py-3 text-gray-900">
+                          <UBadge v-if="userData.persona?.persona_type" :color="getPersonaColor(userData.persona.persona_type)">
+                            {{ userData.persona.persona_type }}
+                          </UBadge>
+                          <span v-else class="text-gray-500">Not Assigned</span>
+                        </td>
+                        <td class="px-4 py-3 text-gray-900">{{ userData.signals_count }}</td>
+                        <td class="px-4 py-3 text-gray-900">{{ userData.recommendations_count }}</td>
+                        <td class="px-4 py-3">
+                          <UButton
+                            size="xs"
+                            variant="ghost"
+                            @click="toggleExpand(userData)"
+                          >
+                            {{ expandedRows.has(userData.user.id) ? 'Collapse' : 'Expand' }}
+                          </UButton>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div v-if="filteredUsers.length > 0" class="mt-2 text-sm text-gray-600 text-center">
+                  Showing {{ filteredUsers.length }} user{{ filteredUsers.length !== 1 ? 's' : '' }}
+                </div>
+              </div>
+              
+              <!-- Expanded Row Content -->
+              <div v-for="user in filteredUsers" :key="user.user.id">
+                <UCard
+                  v-if="expandedRows.has(user.user.id)"
+                  class="mt-4"
+                >
+                  <div class="space-y-4">
+                    <!-- Signals -->
+                    <div>
+                      <h3 class="font-semibold mb-2 text-gray-900">Signals</h3>
+                      <div class="space-y-2">
+                        <div
+                          v-for="signal in user.signals"
+                          :key="signal.id"
+                          class="p-3 bg-white rounded border-2 border-gray-300 shadow-sm"
+                        >
+                          <p class="font-semibold text-gray-900 mb-2">{{ signal.signal_type }}</p>
+                          <pre class="text-xs text-gray-700 bg-gray-50 p-2 rounded border border-gray-200 overflow-x-auto">{{ JSON.stringify(signal.signal_data, null, 2) }}</pre>
+                        </div>
                       </div>
                     </div>
-                    <div class="flex gap-2">
-                      <UButton
-                        size="xs"
-                        color="primary"
-                        @click="approveRecommendation(rec.id)"
-                        :disabled="!!rec.approved_by_operator"
-                        :aria-label="rec.approved_by_operator ? 'Recommendation already approved' : 'Approve this recommendation'"
-                        :aria-disabled="!!rec.approved_by_operator"
-                      >
-                        Approve
-                      </UButton>
-                      <UButton
-                        size="xs"
-                        color="error"
-                        variant="outline"
-                        @click="flagRecommendation(rec.id)"
-                        aria-label="Flag this recommendation for review"
-                      >
-                        Flag
-                      </UButton>
+                    
+                    <!-- Persona Rationale -->
+                    <div v-if="user.persona">
+                      <h3 class="font-semibold mb-2 text-[#1D3557]">Persona Rationale</h3>
+                      <p class="text-[#457B9D]">{{ user.persona.rationale }}</p>
+                    </div>
+                    
+                    <!-- Recommendations -->
+                    <div>
+                      <h3 class="font-semibold mb-2 text-[#1D3557]">Recommendations</h3>
+                      <div class="space-y-2">
+                        <div
+                          v-for="rec in user.recommendations"
+                          :key="rec.id"
+                          class="p-2 border border-[#A8DADC] rounded flex justify-between items-center bg-white"
+                          :class="{ 'ring-2 ring-[#457B9D]': selectedRecommendations.has(rec.id) }"
+                        >
+                          <div class="flex items-center gap-3 flex-1">
+                            <UCheckbox
+                              :model-value="selectedRecommendations.has(rec.id)"
+                              @update:model-value="toggleRecommendationSelection(rec.id)"
+                              :label="''"
+                              :aria-label="`Select recommendation: ${rec.rationale.substring(0, 50)}`"
+                            />
+                            <div class="flex-1">
+                              <p class="font-medium text-[#1D3557]">{{ rec.rationale.substring(0, 100) }}...</p>
+                              <p class="text-xs text-[#457B9D]/70">{{ new Date(rec.created_at).toLocaleDateString() }}</p>
+                              <UBadge v-if="rec.approved_by_operator" color="green" size="xs" class="mt-1">
+                                Approved
+                              </UBadge>
+                            </div>
+                          </div>
+                          <div class="flex gap-2">
+                            <UButton
+                              size="xs"
+                              color="primary"
+                              @click="approveRecommendation(rec.id)"
+                              :disabled="!!rec.approved_by_operator"
+                              :aria-label="rec.approved_by_operator ? 'Recommendation already approved' : 'Approve this recommendation'"
+                              :aria-disabled="!!rec.approved_by_operator"
+                            >
+                              Approve
+                            </UButton>
+                            <UButton
+                              size="xs"
+                              color="error"
+                              variant="outline"
+                              @click="flagRecommendation(rec.id)"
+                              aria-label="Flag this recommendation for review"
+                            >
+                              Flag
+                            </UButton>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </UCard>
               </div>
             </div>
           </UCard>
-        </div>
-      </UCard>
         </template>
         
         <template #flag-queue>
@@ -391,26 +452,28 @@ const toast = useToast()
 const loading = ref(false)
 const loadingFlagQueue = ref(false)
 const loadingFairness = ref(false)
+const processingAllUsers = ref(false)
 const users = ref<any[]>([])
 const expandedRows = ref(new Set<string>())
 const selectedRecommendations = ref(new Set<string>())
 const bulkProcessing = ref(false)
-const activeTab = ref(0)
+const activeTab = ref('users')
 const flaggedRecommendations = ref<any[]>([])
 const fairnessMetrics = ref<any>(null)
 const currentOperatorId = ref<string | null>(null)
+const loadError = ref<string | null>(null)
 
 const demographicColumns = [
-  { key: 'demographic', label: 'Demographic' },
-  { key: 'persona', label: 'Persona' },
-  { key: 'count', label: 'Count' },
-  { key: 'percentage', label: 'Percentage' }
+  { id: 'demographic', key: 'demographic', label: 'Demographic' },
+  { id: 'persona', key: 'persona', label: 'Persona' },
+  { id: 'count', key: 'count', label: 'Count' },
+  { id: 'percentage', key: 'percentage', label: 'Percentage' }
 ]
 
 const tabs = [
-  { label: 'Users', value: 'users' },
-  { label: 'Flag Queue', value: 'flag-queue' },
-  { label: 'Fairness Analysis', value: 'fairness' }
+  { label: 'Users', value: 'users', slot: 'users' },
+  { label: 'Flag Queue', value: 'flag-queue', slot: 'flag-queue' },
+  { label: 'Fairness Analysis', value: 'fairness', slot: 'fairness' }
 ]
 
 const filters = ref({
@@ -432,7 +495,9 @@ const signalTypeOptions = [
   { label: 'All Signals', value: null },
   { label: 'Subscriptions', value: 'subscriptions' },
   { label: 'Savings', value: 'savings' },
-  { label: 'Credit', value: 'credit_high_utilization' },
+  { label: 'Credit High Utilization', value: 'credit_high_utilization' },
+  { label: 'Credit Overdue', value: 'credit_overdue' },
+  { label: 'Credit Moderate Utilization', value: 'credit_moderate_utilization' },
   { label: 'Income', value: 'income' }
 ]
 
@@ -445,16 +510,19 @@ const columns = [
 ]
 
 const filteredUsers = computed(() => {
+  console.log('[FILTERED] Computing filteredUsers, users.value.length:', users.value.length)
   let filtered = users.value
   
   if (filters.value.persona) {
     filtered = filtered.filter(u => u.persona?.persona_type === filters.value.persona)
+    console.log('[FILTERED] After persona filter:', filtered.length)
   }
   
   if (filters.value.signalType) {
     filtered = filtered.filter(u =>
       u.signals.some((s: any) => s.signal_type === filters.value.signalType)
     )
+    console.log('[FILTERED] After signalType filter:', filtered.length)
   }
   
   if (filters.value.search) {
@@ -462,8 +530,10 @@ const filteredUsers = computed(() => {
     filtered = filtered.filter(u =>
       u.user.fake_name.toLowerCase().includes(search)
     )
+    console.log('[FILTERED] After search filter:', filtered.length)
   }
   
+  console.log('[FILTERED] Final filtered count:', filtered.length)
   return filtered
 })
 
@@ -488,47 +558,135 @@ const toggleExpand = (row: any) => {
 }
 
 const refreshData = async () => {
-  loading.value = true
+  await loadUsers()
+}
+
+const processAllUsers = async () => {
+  processingAllUsers.value = true
   try {
+    const result = await $fetch('/api/operator/process-all-users', {
+      method: 'POST'
+    })
+    
+    toast.add({
+      title: 'Processing Complete',
+      description: `Processed ${result.processed} of ${result.total} users. ${result.errors.length > 0 ? `${result.errors.length} errors occurred.` : ''}`,
+      color: result.errors.length > 0 ? 'warning' : 'success',
+      timeout: 5000
+    })
+    
+    // Refresh the user list to show updated data
     await loadUsers()
+  } catch (error: any) {
+    toast.add({
+      title: 'Processing Failed',
+      description: error.message || 'Failed to process users',
+      color: 'error',
+      timeout: 5000
+    })
   } finally {
-    loading.value = false
+    processingAllUsers.value = false
   }
 }
 
 const loadUsers = async () => {
+  loading.value = true
+  loadError.value = null
   try {
+    // Refresh session to get updated JWT with operator role
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) {
+      console.warn('Session error:', sessionError)
+    }
+    
+    // Get current user to verify operator status
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (user) {
+      console.log('Current user:', {
+        id: user.id,
+        email: user.email,
+        role: user.user_metadata?.role,
+        is_operator: user.user_metadata?.is_operator,
+        all_metadata: user.user_metadata
+      })
+    }
+    
     // Get all users
-    const { data: usersData } = await supabase
+    const { data: usersData, error: usersError } = await supabase
       .from('users')
       .select('*')
       .limit(100)
     
-    if (!usersData) return
+    if (usersError) {
+      console.error('Error fetching users:', usersError)
+      console.error('Error details:', {
+        message: usersError.message,
+        details: usersError.details,
+        hint: usersError.hint,
+        code: usersError.code
+      })
+      loadError.value = `Failed to load users: ${usersError.message}. This might be due to Row Level Security (RLS) policies. Operators need permissions to view all users. If you just set your operator role, try logging out and back in.`
+      users.value = []
+      return
+    }
+    
+    console.log('Loaded users:', usersData?.length || 0)
+    
+    if (!usersData || usersData.length === 0) {
+      users.value = []
+      return
+    }
     
     // For each user, get their signals, persona, and recommendations
     const usersWithData = await Promise.all(
       usersData.map(async (user) => {
-        const [signals, persona, recommendations] = await Promise.all([
-          supabase.from('signals').select('*').eq('user_id', user.id),
-          supabase.from('personas').select('*').eq('user_id', user.id).single(),
-          supabase.from('recommendations').select('*').eq('user_id', user.id)
-        ])
-        
-        return {
-          user,
-          signals: signals.data || [],
-          persona: persona.data,
-          recommendations: recommendations.data || [],
-          signals_count: signals.data?.length || 0,
-          recommendations_count: recommendations.data?.length || 0
+        try {
+          const [signals, persona, recommendations] = await Promise.all([
+            supabase.from('signals').select('*').eq('user_id', user.id),
+            supabase.from('personas').select('*').eq('user_id', user.id).maybeSingle(), // Use maybeSingle to avoid 406 errors
+            supabase.from('recommendations').select('*').eq('user_id', user.id)
+          ])
+          
+          return {
+            user,
+            signals: signals.data || [],
+            persona: persona.data || null,
+            recommendations: recommendations.data || [],
+            signals_count: signals.data?.length || 0,
+            recommendations_count: recommendations.data?.length || 0
+          }
+        } catch (error: any) {
+          console.error(`Error loading data for user ${user.id}:`, error)
+          // Return user with empty data if there's an error
+          return {
+            user,
+            signals: [],
+            persona: null,
+            recommendations: [],
+            signals_count: 0,
+            recommendations_count: 0
+          }
         }
       })
     )
     
+    console.log('Processed users with data:', usersWithData.length)
+    console.log('Sample user data:', usersWithData[0] ? {
+      user: usersWithData[0].user?.fake_name,
+      signals_count: usersWithData[0].signals_count,
+      persona: usersWithData[0].persona?.persona_type,
+      recommendations_count: usersWithData[0].recommendations_count
+    } : 'No users')
+    
     users.value = usersWithData
+    console.log('users.value set, length:', users.value.length)
+    console.log('filteredUsers computed would return:', filteredUsers.value.length)
   } catch (error: any) {
     console.error('Error loading users:', error)
+    loadError.value = `Unexpected error: ${error.message || 'Unknown error occurred'}`
+    users.value = []
+  } finally {
+    loading.value = false
   }
 }
 
@@ -833,6 +991,16 @@ const checkOperatorAccess = async () => {
   }
 }
 
+// Store cleanup function for realtime subscriptions
+let cleanupRealtime: (() => void) | null = null
+
+// Register cleanup hook at top level (before any async operations)
+onUnmounted(() => {
+  if (cleanupRealtime) {
+    cleanupRealtime()
+  }
+})
+
 onMounted(async () => {
   // Check operator access
   const hasAccess = await checkOperatorAccess()
@@ -857,12 +1025,7 @@ onMounted(async () => {
   await loadFairnessMetrics()
   
   // Set up realtime subscriptions
-  const cleanup = setupRealtime()
-  
-  // Cleanup on unmount
-  onUnmounted(() => {
-    cleanup()
-  })
+  cleanupRealtime = setupRealtime()
 })
 </script>
 

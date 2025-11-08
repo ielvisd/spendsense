@@ -98,6 +98,13 @@ export default defineEventHandler(async (event) => {
     // Apply guardrails: eligibility + tone validation + disclaimer
     const filteredRecommendations = applyGuardrails(recommendations, accounts || [])
     
+    // Clear existing recommendations for this user to prevent duplicates
+    // (In production, you might want to keep historical recommendations)
+    await supabase
+      .from('recommendations')
+      .delete()
+      .eq('user_id', userId)
+    
     // Store recommendations
     for (const rec of filteredRecommendations) {
       const { error: recError } = await supabase

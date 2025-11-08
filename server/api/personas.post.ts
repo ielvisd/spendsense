@@ -56,14 +56,18 @@ export default defineEventHandler(async (event) => {
     
     // Get transactions for impulse spender detection
     const accountIds = accounts?.map(acc => acc.id) || []
-    const { data: transactions } = await supabase
-      .from('transactions')
-      .select('*')
-      .in('account_id', accountIds)
-      .limit(1000) // Get recent transactions
+    let transactions = []
+    if (accountIds.length > 0) {
+      const { data: transactionsData } = await supabase
+        .from('transactions')
+        .select('*')
+        .in('account_id', accountIds)
+        .limit(1000) // Get recent transactions
+      transactions = transactionsData || []
+    }
     
     // Assign persona based on priority rules (using extracted function)
-    const persona = assignPersona(signals || [], accounts || [], liabilities || [], transactions || [])
+    const persona = assignPersona(signals || [], accounts || [], liabilities || [], transactions)
     
     // Store persona assignment
     const { error: personaError } = await supabase
@@ -94,9 +98,18 @@ export default defineEventHandler(async (event) => {
     
     return { persona }
   } catch (error: any) {
+    console.error('[PERSONAS] Error:', error)
+    console.error('[PERSONAS] Error stack:', error.stack)
+    console.error('[PERSONAS] Error details:', {
+      message: error.message,
+      statusCode: error.statusCode,
+      code: error.code,
+      details: error.details,
+      hint: error.hint
+    })
     throw createError({
       statusCode: error.statusCode || 500,
-      message: `Persona assignment failed: ${error.message}`
+      message: `Persona assignment failed: ${error.message || 'Unknown error'}`
     })
   }
 })

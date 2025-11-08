@@ -101,6 +101,40 @@ export default defineEventHandler(async (event) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey)
     
+    // Get user ID from query or body if available (needed for operator check)
+    const query = getQuery(event)
+    const userId = query.user_id as string || null
+    
+    // Check if user is an operator (for bulk imports)
+    // Use admin API with service role key to check user metadata
+    let isOperator = false
+    if (userId && serviceRoleKey) {
+      try {
+        // Create admin client to access auth.users
+        const adminSupabase = createClient(supabaseUrl, serviceRoleKey, {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        })
+        
+        // Use admin API to get user
+        const { data: authUser, error: adminError } = await adminSupabase.auth.admin.getUserById(userId)
+        
+        if (!adminError && authUser?.user) {
+          const userMetadata = authUser.user.user_metadata || {}
+          isOperator = userMetadata.role === 'operator' || 
+                      userMetadata.role === 'admin' || 
+                      userMetadata.is_operator === true
+          console.log('[INGEST] User operator status:', isOperator, 'metadata:', userMetadata)
+        } else {
+          console.warn('[INGEST] Could not get user via admin API:', adminError)
+        }
+      } catch (error) {
+        console.warn('[INGEST] Could not check operator status:', error)
+      }
+    }
+    
     // Check if storage bucket exists (file storage is optional)
     const bucketName = 'data-uploads'
     let bucketExists = false
@@ -137,10 +171,6 @@ export default defineEventHandler(async (event) => {
     let usersData: UserWithData[]
     let storedFilePath: string | null = null
     let fileName: string | null = null
-    
-    // Get user ID from query or body if available
-    const query = getQuery(event)
-    const userId = query.user_id as string || null
     
     // Debug logging
     console.log('[INGEST] Received request with userId:', userId)
@@ -259,10 +289,10 @@ export default defineEventHandler(async (event) => {
       errors: [] as string[]
     }
     
-    // If userId is provided, assign ONE user's data from the synthetic file (for authenticated user uploads)
-    // Otherwise, process each user separately (for bulk imports)
-    console.log('[INGEST] Processing with userId:', userId, 'usersData length:', usersData?.length)
-    if (userId) {
+    // If userId is provided AND user is NOT an operator, assign ONE user's data from the synthetic file (for authenticated user uploads)
+    // If user IS an operator OR no userId provided, process ALL users (for bulk imports)
+    console.log('[INGEST] Processing with userId:', userId, 'usersData length:', usersData?.length, 'isOperator:', isOperator)
+    if (userId && !isOperator) {
       console.log('[INGEST] Assigning single user data for authenticated user:', userId)
       
       // Delete old data for this user to avoid duplicates from previous uploads
